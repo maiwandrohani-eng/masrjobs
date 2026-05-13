@@ -46,11 +46,33 @@ export default function AdminDashboardPage() {
     deleteOpportunitySubmission,
     adminCloseOpportunity,
     toggleOpportunityFeatured,
+    refreshPublicCatalog,
   } = useMasrJobs();
 
   const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditMessage, setAuditMessage] = useState<string | null>(null);
+
+  type OrgProfileChangeRow = {
+    id: string;
+    organizationId: string;
+    currentName: string;
+    currentSlug: string;
+    verificationStatus: string;
+    proposedName: string;
+    proposedEmail: string | null;
+    proposedPhone: string | null;
+    proposedWebsite: string | null;
+    proposedLocation: string | null;
+    proposedDescription: string | null;
+    submittedAt: string;
+  };
+
+  const [profileRows, setProfileRows] = useState<OrgProfileChangeRow[]>([]);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileMsg, setProfileMsg] = useState<string | null>(null);
+
+  const previewAuth = isDemoAuthEnabled();
 
   useEffect(() => {
     if (!hydrated || session?.role !== "admin") return;
@@ -88,11 +110,61 @@ export default function AdminDashboardPage() {
     };
   }, [hydrated, session?.role]);
 
-  const publishedCount = opportunities.length;
+  useEffect(() => {
+    if (!hydrated || session?.role !== "admin" || previewAuth) return;
+    let cancelled = false;
+    setProfileLoading(true);
+    setProfileMsg(null);
+    void fetch("/api/admin/organization-profile-changes", { credentials: "include" })
+      .then(async (res) => {
+        const body = (await res.json()) as { ok?: boolean; items?: OrgProfileChangeRow[] };
+        if (cancelled) return;
+        if (!res.ok || !body.ok) {
+          setProfileRows([]);
+          setProfileMsg("Could not load pending organization profile updates.");
+          return;
+        }
+        setProfileRows(body.items ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setProfileMsg("Could not load pending organization profile updates.");
+      })
+      .finally(() => {
+        if (!cancelled) setProfileLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, session?.role, previewAuth]);
+
+  const moderateOrgProfile = async (changeId: string, action: "approve" | "reject") => {
+    if (action === "approve") {
+      if (!confirm("Apply these changes to the live organization profile and public directory?"))
+        return;
+    } else if (!confirm("Reject this profile update? The employer keeps the current live details.")) {
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/organization-profile-changes/moderate", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ changeId, action }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        alert(data.error ?? "Update failed.");
+        return;
+      }
+      setProfileRows((prev) => prev.filter((r) => r.id !== changeId));
+      refreshPublicCatalog();
+    } catch {
+      alert("Network error.");
+    }
+  };
   const rejectedCount = orgListings.filter((l) => l.status === "Rejected").length;
   const closedCount = orgListings.filter((l) => l.status === "Closed").length;
   const totalUsersDisplay = 1240 + registeredUsers.length;
-  const previewAuth = isDemoAuthEnabled();
 
   const managedExtras = orgSubmittedOpportunities.filter(
     (o) => o.visibility === "published" || o.visibility === "closed",
@@ -156,6 +228,8 @@ export default function AdminDashboardPage() {
       </PageShell>
     );
   }
+
+  const publishedCount = opportunities.length;
 
   const stats = [
     {
@@ -260,6 +334,96 @@ export default function AdminDashboardPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </section>
+
+      <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+        <h2 className="text-base font-bold text-brand-navy">Organization profile updates</h2>
+        <p className="mt-2 text-sm text-foreground/70">
+          Employers can submit edits to their public directory details. Approve to apply them to the live
+          organization record; reject to keep the current published profile.
+        </p>
+        {profileMsg ? (
+          <p className="mt-3 text-sm text-amber-800">{profileMsg}</p>
+        ) : null}
+        {profileLoading ? (
+          <p className="mt-3 text-sm text-foreground/60">Loading pending profile updates…</p>
+        ) : profileRows.length === 0 ? (
+          <p className="mt-3 text-sm text-foreground/70">No pending profile updates.</p>
+        ) : (
+          <div className="mt-4 space-y-6">
+            {profileRows.map((row) => (
+              <div
+                key={row.id}
+                className="rounded-xl border border-brand-border bg-brand-muted/30 p-4 text-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-brand-navy">
+                      {row.currentName}{" "}
+                      <span className="font-normal text-foreground/55">({row.currentSlug})</span>
+                    </p>
+                    <p className="mt-1 text-xs text-foreground/55">
+                      Status: {row.verificationStatus} · Submitted{" "}
+                      {new Date(row.submittedAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void moderateOrgProfile(row.id, "approve")}
+                      className="rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void moderateOrgProfile(row.id, "reject")}
+                      className="rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </div>
+                <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-foreground/50">Organization name</dt>
+                    <dd className="mt-1 text-foreground/80">
+                      <span className="text-foreground/55">Live: </span>
+                      {row.currentName}
+                      <br />
+                      <span className="text-foreground/55">Proposed: </span>
+                      <span className="font-medium text-brand-navy">{row.proposedName}</span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-foreground/50">Public contact email</dt>
+                    <dd className="mt-1 break-all text-foreground/80">
+                      {row.proposedEmail ?? "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-foreground/50">Phone</dt>
+                    <dd className="mt-1 text-foreground/80">{row.proposedPhone ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-foreground/50">Website</dt>
+                    <dd className="mt-1 break-all text-foreground/80">{row.proposedWebsite ?? "—"}</dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs font-semibold uppercase text-foreground/50">Location</dt>
+                    <dd className="mt-1 text-foreground/80">{row.proposedLocation ?? "—"}</dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs font-semibold uppercase text-foreground/50">About / description</dt>
+                    <dd className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap text-foreground/80">
+                      {row.proposedDescription?.trim() ? row.proposedDescription : "—"}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
           </div>
         )}
       </section>

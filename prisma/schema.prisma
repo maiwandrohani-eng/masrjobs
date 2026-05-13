@@ -77,6 +77,8 @@ enum AdminActionType {
   OPPORTUNITY_EDITED
   OPPORTUNITY_REMOVED
   OPPORTUNITY_DELETED
+  ORG_PROFILE_CHANGE_APPROVED
+  ORG_PROFILE_CHANGE_REJECTED
   CATEGORY_CREATED
   CATEGORY_UPDATED
   CATEGORY_DELETED
@@ -84,6 +86,12 @@ enum AdminActionType {
   CONTENT_REPORTED
   CONTENT_MODERATED
   REPORT_EXPORTED
+}
+
+enum OrgProfileChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model User {
@@ -143,9 +151,34 @@ model Organization {
   users         User[]
   opportunities Opportunity[]
   notifications Notification[]
+  profileChanges OrganizationProfileChange[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/** Employer-proposed organization directory / contact updates; applied after admin approval. */
+model OrganizationProfileChange {
+  id             String @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  status OrgProfileChangeStatus @default(PENDING)
+
+  submittedByUserId String?
+
+  proposedName        String
+  proposedEmail       String?
+  proposedPhone       String?
+  proposedWebsite     String?
+  proposedLocation    String?
+  proposedDescription String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([organizationId, status])
 }
 
 model Category {

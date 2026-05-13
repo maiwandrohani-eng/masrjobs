@@ -7,12 +7,20 @@ import { getPrisma } from "@/lib/prisma";
 import { prismaErrorCode } from "@/lib/prisma-error-code";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
-const putSchema = z.object({
+const profileFields = z.object({
+  organizationName: z.string().min(1).max(200),
+  contactEmail: z.string().max(254).optional().default(""),
   about: z.string().max(12000),
   location: z.string().max(200),
   website: z.string().max(500),
   phone: z.string().max(40),
 });
+
+function normalizeContactEmail(raw: string): string | null {
+  const t = raw.trim().toLowerCase();
+  if (!t) return null;
+  return t;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +48,7 @@ export async function GET() {
       where: { id: orgId },
       select: {
         name: true,
+        email: true,
         description: true,
         location: true,
         website: true,
@@ -57,15 +66,38 @@ export async function GET() {
         { status: 403 },
       );
     }
+
+    const pending = await prisma.organizationProfileChange.findFirst({
+      where: { organizationId: orgId, status: "PENDING" },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const published = {
+      organizationName: org.name,
+      contactEmail: org.email ?? "",
+      about: org.description ?? "",
+      location: org.location ?? "",
+      website: org.website ?? "",
+      phone: org.phone ?? "",
+      verificationStatus: org.verificationStatus,
+    };
+
     return NextResponse.json({
       ok: true,
       data: {
-        organizationName: org.name,
-        about: org.description ?? "",
-        location: org.location ?? "",
-        website: org.website ?? "",
-        phone: org.phone ?? "",
-        verificationStatus: org.verificationStatus,
+        published,
+        pending: pending
+          ? {
+              id: pending.id,
+              organizationName: pending.proposedName,
+              contactEmail: pending.proposedEmail ?? "",
+              about: pending.proposedDescription ?? "",
+              location: pending.proposedLocation ?? "",
+              website: pending.proposedWebsite ?? "",
+              phone: pending.proposedPhone ?? "",
+              submittedAt: pending.createdAt.toISOString(),
+            }
+          : null,
       },
     });
   } catch (e) {
@@ -108,10 +140,18 @@ export async function PUT(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
 
-  const parsed = putSchema.safeParse(json);
+  const parsed = profileFields.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: parsed.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+
+  const contactEmailNorm = normalizeContactEmail(parsed.data.contactEmail);
+  if (contactEmailNorm && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmailNorm)) {
+    return NextResponse.json(
+      { ok: false, error: { contactEmail: ["Enter a valid contact email or leave it empty."] } },
       { status: 400 },
     );
   }
@@ -163,22 +203,36 @@ export async function PUT(req: Request) {
       );
     }
 
-    await prisma.organization.update({
-      where: { id: orgId },
-      data: {
-        description: aboutTrim.length > 0 ? aboutTrim : null,
-        location: locTrim.length > 0 ? locTrim : null,
-        website: websiteRaw.length > 0 ? websiteRaw : null,
-        phone: phoneTrim.length > 0 ? phoneTrim : null,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.organizationProfileChange.deleteMany({
+        where: { organizationId: orgId, status: "PENDING" },
+      });
+      await tx.organizationProfileChange.create({
+        data: {
+          organizationId: orgId,
+          submittedByUserId: session.user.id,
+          status: "PENDING",
+          proposedName: parsed.data.organizationName.trim(),
+          proposedEmail: contactEmailNorm,
+          proposedPhone: phoneTrim.length > 0 ? phoneTrim : null,
+          proposedWebsite: websiteRaw.length > 0 ? websiteRaw : null,
+          proposedLocation: locTrim.length > 0 ? locTrim : null,
+          proposedDescription: aboutTrim.length > 0 ? aboutTrim : null,
+        },
+      });
     });
-    return NextResponse.json({ ok: true });
+
+    return NextResponse.json({
+      ok: true,
+      message:
+        "Your updates were submitted for administrator review. They will appear on the public site after approval.",
+    });
   } catch (e) {
     console.error("PUT /api/organization/profile", e);
     const code = prismaErrorCode(e);
     if (code === "P2025") {
       return NextResponse.json({ ok: false, error: "Organization not found." }, { status: 404 });
     }
-    return NextResponse.json({ ok: false, error: "Failed to save profile." }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "Failed to submit profile update." }, { status: 500 });
   }
 }

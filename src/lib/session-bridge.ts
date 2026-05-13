@@ -22,11 +22,17 @@ export function sessionUserFromNextAuth(session: Session | null): SessionUser | 
     (u.name && u.name.trim()) ||
     u.email.split("@")[0]?.replace(/[._-]/g, " ") ||
     "User";
+  const organizationName =
+    typeof u.organizationName === "string" && u.organizationName.trim()
+      ? u.organizationName.trim()
+      : undefined;
+
   return {
     role,
     email: u.email.trim().toLowerCase(),
     displayName,
     userId: u.id,
     organizationId: u.organizationId ?? undefined,
+    organizationName,
   };
 }

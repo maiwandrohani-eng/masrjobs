@@ -28,7 +28,7 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.findUnique({
           where: { email },
           include: {
-            organization: { select: { isActive: true } },
+            organization: { select: { isActive: true, name: true } },
           },
         });
         if (!user?.isActive) return null;
@@ -56,6 +56,10 @@ export const authOptions: NextAuthOptions = {
           name,
           role: user.role as UserRole,
           organizationId: user.organizationId,
+          organizationName:
+            user.role === "ORG_USER" && user.organization
+              ? user.organization.name
+              : undefined,
         };
       },
     }),
@@ -69,6 +73,10 @@ export const authOptions: NextAuthOptions = {
         token.name = user.name;
         token.role = user.role as UserRole;
         token.organizationId = user.organizationId ?? null;
+        token.organizationName =
+          typeof user.organizationName === "string" && user.organizationName.trim()
+            ? user.organizationName.trim()
+            : null;
       }
       return token;
     },
@@ -79,6 +87,9 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name as string | null | undefined;
         session.user.role = token.role as UserRole;
         session.user.organizationId = (token.organizationId as string | null) ?? null;
+        const on = token.organizationName as string | null | undefined;
+        session.user.organizationName =
+          typeof on === "string" && on.trim() ? on.trim() : null;
       }
       return session;
     },

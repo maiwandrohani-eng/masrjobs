@@ -49,7 +49,11 @@ export function RegisterForm() {
     e.preventDefault();
     setError("");
     if (!name.trim() || !email.includes("@")) {
-      setError("Please enter your name and a valid email.");
+      setError(
+        role === "organization"
+          ? "Please enter the contact person’s name and a valid email."
+          : "Please enter your name and a valid email.",
+      );
       return;
     }
     if (role === "organization" && !orgName.trim()) {
@@ -193,7 +197,7 @@ export function RegisterForm() {
       </fieldset>
 
       <label className="mt-6 block text-xs font-semibold text-brand-navy">
-        Full name
+        {role === "organization" ? "Your name (contact person)" : "Full name"}
       </label>
       <input
         value={name}
@@ -213,6 +217,10 @@ export function RegisterForm() {
             className="mt-1 w-full rounded-xl border border-brand-border bg-brand-muted/40 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
             placeholder="e.g. Care Egypt Foundation"
           />
+          <p className="mt-1.5 text-xs text-foreground/60">
+            Use the public or legal name of the organization. This appears on every job listing and in the
+            directory—not your personal name.
+          </p>
         </>
       ) : null}
 

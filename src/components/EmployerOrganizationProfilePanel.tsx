@@ -5,13 +5,30 @@ import { useCallback, useEffect, useState } from "react";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
 import { isDemoAuthEnabled } from "@/lib/demo-auth";
 
-type ProfilePayload = {
+type PublishedProfile = {
   organizationName: string;
+  contactEmail: string;
   about: string;
   location: string;
   website: string;
   phone: string;
   verificationStatus: string;
+};
+
+type PendingProfile = {
+  id: string;
+  organizationName: string;
+  contactEmail: string;
+  about: string;
+  location: string;
+  website: string;
+  phone: string;
+  submittedAt: string;
+};
+
+type ProfileApiData = {
+  published: PublishedProfile;
+  pending: PendingProfile | null;
 };
 
 function formatSaveError(body: unknown): string {
@@ -34,11 +51,15 @@ export function EmployerOrganizationProfilePanel() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [authBlocked, setAuthBlocked] = useState(false);
+  const [published, setPublished] = useState<PublishedProfile | null>(null);
+  const [pending, setPending] = useState<PendingProfile | null>(null);
+
+  const [organizationName, setOrganizationName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [about, setAbout] = useState("");
   const [location, setLocation] = useState("");
   const [website, setWebsite] = useState("");
   const [phone, setPhone] = useState("");
-  const [orgName, setOrgName] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,7 +67,11 @@ export function EmployerOrganizationProfilePanel() {
     setAuthBlocked(false);
     try {
       const res = await fetch("/api/organization/profile", { credentials: "include" });
-      const data = (await res.json()) as { ok?: boolean; data?: ProfilePayload; error?: string };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        data?: ProfileApiData;
+        error?: string;
+      };
       if (res.status === 401) {
         setAuthBlocked(true);
         return;
@@ -59,12 +84,16 @@ export function EmployerOrganizationProfilePanel() {
       if (!res.ok || !data.ok || !data.data) {
         throw new Error(data.error || "Could not load your organization profile.");
       }
-      const d = data.data;
-      setOrgName(d.organizationName);
-      setAbout(d.about);
-      setLocation(d.location);
-      setWebsite(d.website);
-      setPhone(d.phone);
+      const { published: pub, pending: pend } = data.data;
+      setPublished(pub);
+      setPending(pend);
+      const src = pend ?? pub;
+      setOrganizationName(src.organizationName);
+      setContactEmail(src.contactEmail);
+      setAbout(src.about);
+      setLocation(src.location);
+      setWebsite(src.website);
+      setPhone(src.phone);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Could not load profile.");
     } finally {
@@ -86,18 +115,28 @@ export function EmployerOrganizationProfilePanel() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          organizationName,
+          contactEmail,
           about,
           location,
           website,
           phone,
         }),
       });
-      const body = await res.json().catch(() => ({}));
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
+        error?: unknown;
+      };
       if (!res.ok || !body?.ok) {
         setMsg(formatSaveError(body));
         return;
       }
-      setMsg("Profile saved. Updates appear in the organization directory and opportunity browse.");
+      setMsg(
+        body.message ??
+          "Submitted for review. An administrator will apply or reject your updates.",
+      );
+      await load();
       refreshPublicCatalog();
     } catch {
       setMsg("Network error while saving.");
@@ -106,31 +145,48 @@ export function EmployerOrganizationProfilePanel() {
     }
   };
 
+  const isSuccessMsg = (m: string | null) =>
+    !!m &&
+    (m.toLowerCase().includes("submitted") ||
+      m.toLowerCase().includes("review") ||
+      m.toLowerCase().includes("approval"));
+
   return (
     <section className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <h2 className="text-base font-bold text-brand-navy">Edit public organization profile</h2>
+        <h2 className="text-base font-bold text-brand-navy">Organization profile &amp; directory details</h2>
         {!authBlocked && !loading ? (
           <span className="shrink-0 rounded-full bg-brand-gold/15 px-3 py-1 text-xs font-semibold text-brand-navy">
-            Editable
+            {pending ? "Update pending review" : "No pending changes"}
           </span>
         ) : null}
       </div>
       <p className="mt-2 text-sm text-foreground/70">
-        Candidates see this information in the{" "}
+        Changes to your public name, contact details, and description are{" "}
+        <strong>submitted for administrator approval</strong> before they appear on the{" "}
         <a className="font-semibold text-brand-gold underline" href="/organizations">
           organization directory
-        </a>
-        . Update your story, location, website, and phone here, then save.
-        {orgName ? (
-          <>
-            {" "}
-            <span className="text-foreground/55">Registered name:</span>{" "}
-            <span className="font-medium text-brand-navy">{orgName}</span> (contact support to
-            change the legal name on the account).
-          </>
-        ) : null}
+        </a>{" "}
+        and listings. Your current approved details stay visible until an admin approves a new
+        submission.
       </p>
+
+      {pending && published ? (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-semibold text-brand-navy">Awaiting administrator review</p>
+          <p className="mt-1 text-xs text-amber-900/90">
+            Submitted {new Date(pending.submittedAt).toLocaleString()}. You can revise and submit
+            again — that replaces the pending request.
+          </p>
+        </div>
+      ) : null}
+
+      {published && !pending ? (
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-2 text-xs text-emerald-900">
+          <span className="font-semibold">Live on site:</span> {published.organizationName}
+          {published.contactEmail ? ` · ${published.contactEmail}` : ""}
+        </div>
+      ) : null}
 
       {authBlocked ? (
         <div className="mt-4 rounded-xl border border-brand-border bg-brand-muted/50 px-4 py-3 text-sm text-foreground/85">
@@ -162,24 +218,64 @@ export function EmployerOrganizationProfilePanel() {
       ) : null}
 
       {authBlocked ? null : (
-      <div className="mt-4 rounded-xl border border-brand-border bg-brand-muted/40 p-4 text-sm text-foreground/80">
-        <p className="font-semibold text-brand-navy">What to include in “About your organization”</p>
-        <ul className="mt-2 list-inside list-disc space-y-1.5">
-          <li>Mission and main programme areas (e.g. health, education, livelihoods).</li>
-          <li>Where you work in Egypt or regionally, and typical roles you hire for.</li>
-          <li>Registration or partnership context if helpful (without sharing sensitive IDs).</li>
-          <li>How you approach safeguarding, equal opportunity, or language requirements if relevant.</li>
-        </ul>
-        <p className="mt-2 text-xs text-foreground/60">
-          Plain text only; line breaks are preserved. Up to 12,000 characters.
-        </p>
-      </div>
+        <div className="mt-4 rounded-xl border border-brand-border bg-brand-muted/40 p-4 text-sm text-foreground/80">
+          <p className="font-semibold text-brand-navy">About text — what to include</p>
+          <ul className="mt-2 list-inside list-disc space-y-1.5">
+            <li>Mission and main programme areas (e.g. health, education, livelihoods).</li>
+            <li>Where you work in Egypt or regionally, and typical roles you hire for.</li>
+            <li>Registration or partnership context if helpful (without sharing sensitive IDs).</li>
+            <li>Safeguarding, equal opportunity, or language requirements if relevant.</li>
+          </ul>
+          <p className="mt-2 text-xs text-foreground/60">
+            Plain text only; line breaks are preserved. Up to 12,000 characters.
+          </p>
+        </div>
       )}
 
       {authBlocked ? null : loading ? (
         <p className="mt-6 text-sm text-foreground/60">Loading profile…</p>
       ) : (
         <form className="mt-6 space-y-5" onSubmit={onSave}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label htmlFor="org-name" className="block text-sm font-semibold text-brand-navy">
+                Organization name (public) <span className="text-red-600">*</span>
+              </label>
+              <input
+                id="org-name"
+                name="organizationName"
+                type="text"
+                maxLength={200}
+                value={organizationName}
+                onChange={(e) => setOrganizationName(e.target.value)}
+                className="mt-2 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/45"
+                placeholder="Legal or public name as it should appear in the directory"
+              />
+              <p className="mt-1 text-xs text-foreground/55">
+                Shown on every public listing and in the organizations directory—not your personal name.
+              </p>
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="org-contact-email" className="block text-sm font-semibold text-brand-navy">
+                Public contact email
+              </label>
+              <input
+                id="org-contact-email"
+                name="contactEmail"
+                type="email"
+                maxLength={254}
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                className="mt-2 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/45"
+                placeholder="careers@yourorg.org (shown to candidates when relevant)"
+              />
+              <p className="mt-1 text-xs text-foreground/55">
+                This is not your MasrJobs sign-in email; it is the address you want published for
+                inquiries.
+              </p>
+            </div>
+          </div>
+
           <div>
             <label htmlFor="org-about" className="block text-sm font-semibold text-brand-navy">
               About your organization
@@ -187,12 +283,12 @@ export function EmployerOrganizationProfilePanel() {
             <textarea
               id="org-about"
               name="about"
-              rows={14}
+              rows={12}
               maxLength={12000}
               value={about}
               onChange={(e) => setAbout(e.target.value)}
               className="mt-2 w-full rounded-xl border border-brand-border bg-white px-3 py-2.5 text-sm text-brand-navy shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/45"
-              placeholder={`Example structure (replace with your facts):\n\nMasrJobs Demo NGO works with communities in Upper Egypt on youth skills and micro-enterprise.\n\nWe regularly advertise consultancy, programme, and MEAL roles. Most positions are based in Assiut with occasional travel.\n\nWe are an equal-opportunity employer; Arabic and English are used in the workplace.`}
+              placeholder="Mission, programmes, locations, and how you hire…"
             />
             <p className="mt-1 text-xs text-foreground/55 tabular-nums">
               {about.length.toLocaleString()} / 12,000 characters
@@ -230,7 +326,7 @@ export function EmployerOrganizationProfilePanel() {
                 className="mt-2 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/45"
                 placeholder="https://www.example.org"
               />
-              <p className="mt-1 text-xs text-foreground/55">Must start with https://</p>
+              <p className="mt-1 text-xs text-foreground/55">Must start with https:// if provided</p>
             </div>
             <div>
               <label htmlFor="org-phone" className="block text-sm font-semibold text-brand-navy">
@@ -251,8 +347,8 @@ export function EmployerOrganizationProfilePanel() {
 
           {msg ? (
             <p
-              className={`text-sm ${msg.startsWith("Profile saved") ? "text-emerald-800" : "text-red-700"}`}
-              role={msg.startsWith("Profile saved") ? "status" : "alert"}
+              className={`text-sm ${isSuccessMsg(msg) ? "text-emerald-800" : "text-red-700"}`}
+              role={isSuccessMsg(msg) ? "status" : "alert"}
             >
               {msg}
             </p>
@@ -264,7 +360,7 @@ export function EmployerOrganizationProfilePanel() {
               disabled={saving}
               className="inline-flex rounded-xl bg-brand-navy px-5 py-2.5 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50"
             >
-              {saving ? "Saving…" : "Save public profile"}
+              {saving ? "Submitting…" : "Submit for administrator approval"}
             </button>
             <button
               type="button"

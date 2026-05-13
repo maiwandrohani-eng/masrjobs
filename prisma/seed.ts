@@ -50,6 +50,7 @@ async function main() {
     await tx.application.deleteMany();
     await tx.savedOpportunity.deleteMany();
     await tx.featuredOpportunity.deleteMany();
+    await tx.organizationProfileChange.deleteMany();
     await tx.opportunityAttachment.deleteMany();
     await tx.notification.deleteMany();
     await tx.opportunity.deleteMany();

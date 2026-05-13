@@ -9,8 +9,8 @@ export function buildOpportunityFromSubmission(
   input: OrgOpportunitySubmissionInput,
   id: string,
 ): Opportunity {
-  const orgName =
-    session.organizationName ?? session.displayName ?? "Organization";
+  /** Never use the contact person's display name as the employer brand on listings. */
+  const orgName = session.organizationName?.trim() || "Organization";
   const orgId = session.organizationId ?? "org-unknown";
 
   const trim = (s: string) => s.trim();
