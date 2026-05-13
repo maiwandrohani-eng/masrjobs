@@ -100,17 +100,18 @@ export async function POST(req: Request) {
     );
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    return NextResponse.json({ ok: false, error: "Email already registered" }, { status: 409 });
-  }
-
-  const passwordHash = await hash(d.password, 12);
   const parts = d.name.trim().split(/\s+/);
   const firstName = parts[0] ?? d.name.trim();
   const lastName = parts.length > 1 ? parts.slice(1).join(" ") : null;
 
   try {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return NextResponse.json({ ok: false, error: "Email already registered" }, { status: 409 });
+    }
+
+    const passwordHash = await hash(d.password, 12);
+
     if (d.role === "individual") {
       await prisma.user.create({
         data: {
@@ -152,39 +153,43 @@ export async function POST(req: Request) {
     }
   } catch (e) {
     console.error("POST /api/auth/register", e);
-    if (e && typeof e === "object" && "code" in e) {
-      const code = String((e as { code: unknown }).code);
-      if (code === "P2002") {
-        return NextResponse.json(
-          { ok: false, error: "Email already registered" },
-          { status: 409 },
-        );
-      }
-      if (code === "P2021" || code === "P2022") {
-        return NextResponse.json(
-          {
-            ok: false,
-            error:
-              "Database is missing required tables. Apply the Prisma schema to this Neon database (e.g. prisma db push), then try again.",
-          },
-          { status: 503 },
-        );
-      }
-      if (
-        code === "P1001" ||
-        code === "P1000" ||
-        code === "P1002" ||
-        code === "P1017"
-      ) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error:
-              "Could not reach the database. Check DATABASE_URL (use Neon’s pooled URL; remove channel_binding=require if present) and try again.",
-          },
-          { status: 503 },
-        );
-      }
+    const code = prismaErrorCode(e);
+    if (code === "P2002") {
+      return NextResponse.json(
+        { ok: false, error: "Email already registered" },
+        { status: 409 },
+      );
+    }
+    if (code === "P2021" || code === "P2022") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Database is missing required tables. Apply the Prisma schema to this Neon database (e.g. prisma db push), then try again.",
+        },
+        { status: 503 },
+      );
+    }
+    if (code === "P1001" || code === "P1000" || code === "P1002" || code === "P1017") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Could not reach the database. Check DATABASE_URL (use Neon’s pooled URL; remove channel_binding=require if present) and try again.",
+        },
+        { status: 503 },
+      );
+    }
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/does not exist|relation .* not found|42P01/i.test(msg)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Database is missing required tables. Apply the Prisma schema to this Neon database (e.g. prisma db push), then try again.",
+        },
+        { status: 503 },
+      );
     }
     return NextResponse.json(
       { ok: false, error: "Registration failed. Try again or contact support if it persists." },
@@ -193,4 +198,14 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+function prismaErrorCode(e: unknown): string | null {
+  let cur: unknown = e;
+  for (let i = 0; i < 5 && cur && typeof cur === "object"; i += 1) {
+    const o = cur as { code?: unknown; cause?: unknown };
+    if (typeof o.code === "string") return o.code;
+    cur = o.cause;
+  }
+  return null;
 }
