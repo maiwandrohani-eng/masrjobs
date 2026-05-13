@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -137,18 +137,22 @@ export function RegisterForm() {
       redirect: false,
     });
     setBusy(false);
-    if (sign?.error) {
+    if (!sign || sign.error || sign.ok === false) {
       setError("Account created but sign-in failed. Please log in manually.");
       router.push("/login");
       return;
     }
 
-    router.push(
-      role === "organization"
-        ? "/dashboard/organization"
-        : "/dashboard/user",
-    );
-    router.refresh();
+    const sess = await getSession();
+    if (!sess?.user) {
+      setError("Account created. Please sign in from the login page.");
+      router.push("/login");
+      return;
+    }
+
+    const dest =
+      role === "organization" ? "/dashboard/organization" : "/dashboard/user";
+    window.location.assign(dest);
   };
 
   return (

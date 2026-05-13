@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -65,21 +65,52 @@ export function LoginForm() {
     }
 
     setBusy(true);
-    const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard/user";
+    const rawCallback = searchParams.get("callbackUrl") ?? "/dashboard/user";
+    const callbackUrl =
+      rawCallback.startsWith("/") && !rawCallback.startsWith("//")
+        ? rawCallback
+        : "/dashboard/user";
+
     const res = await signIn("credentials", {
       email: email.trim(),
       password,
       redirect: false,
     });
-    setBusy(false);
 
-    if (res?.error) {
-      setError("Invalid email or password.");
+    if (!res || res.error || res.ok === false) {
+      setBusy(false);
+      setError(
+        res?.error === "CredentialsSignin"
+          ? "Invalid email or password."
+          : (res?.error as string) || "Sign-in failed. Please try again.",
+      );
       return;
     }
 
-    router.push(callbackUrl.startsWith("/") ? callbackUrl : "/dashboard/user");
-    router.refresh();
+    const session = await getSession();
+
+    if (!session?.user) {
+      setBusy(false);
+      setError(
+        "Sign-in succeeded but the session was not ready. Try again, or disable strict tracking protection for this site.",
+      );
+      return;
+    }
+
+    const role = session.user.role;
+    let destination = callbackUrl;
+    if (role === "ADMIN") {
+      destination = "/dashboard/admin";
+    } else if (role === "ORG_USER") {
+      destination = "/dashboard/organization";
+    } else if (role === "INDIVIDUAL") {
+      if (!callbackUrl.startsWith("/dashboard/user")) {
+        destination = "/dashboard/user";
+      }
+    }
+
+    /* Full navigation so the session cookie is visible to middleware (client router alone can loop back to /login). */
+    window.location.assign(destination);
   };
 
   return (
