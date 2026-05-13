@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { assertAppOrigin } from "@/lib/assert-app-origin";
 import { getPrisma } from "@/lib/prisma";
+import { prismaErrorCode } from "@/lib/prisma-error-code";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
@@ -66,6 +67,38 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, alreadySubscribed: false });
   } catch (e) {
     console.error("POST /api/newsletter/subscribe", e);
-    return NextResponse.json({ ok: false, error: "Could not save subscription." }, { status: 500 });
+    const code = prismaErrorCode(e);
+    if (code === "P2002") {
+      return NextResponse.json({ ok: true, alreadySubscribed: true });
+    }
+    if (code === "P2021" || code === "P2022") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "The newsletter table is not in the database yet. Run `npx prisma db push` (or apply migrations) on this environment, then try again.",
+        },
+        { status: 503 },
+      );
+    }
+    const msg = e instanceof Error ? e.message : "";
+    if (/does not exist|relation .* not found|42P01/i.test(msg)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "The newsletter table is missing. Apply the latest Prisma schema to your database (e.g. `npx prisma db push`), then try again.",
+        },
+        { status: 503 },
+      );
+    }
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Could not save your subscription. If this continues, the database may be unreachable or the schema may need updating.",
+      },
+      { status: 500 },
+    );
   }
 }

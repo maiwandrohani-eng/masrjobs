@@ -4,6 +4,7 @@ import { z } from "zod";
 import { assertAppOrigin } from "@/lib/assert-app-origin";
 import { sendRegistrationEmailBundle } from "@/lib/email/transactional";
 import { getPrisma } from "@/lib/prisma";
+import { prismaErrorCode } from "@/lib/prisma-error-code";
 import { slugify } from "@/lib/slugify";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
@@ -166,14 +167,4 @@ export async function POST(req: Request) {
   sendRegistrationEmailBundle(email, displayName);
 
   return NextResponse.json({ ok: true });
-}
-
-function prismaErrorCode(e: unknown): string | null {
-  let cur: unknown = e;
-  for (let i = 0; i < 5 && cur && typeof cur === "object"; i += 1) {
-    const o = cur as { code?: unknown; cause?: unknown };
-    if (typeof o.code === "string") return o.code;
-    cur = o.cause;
-  }
-  return null;
 }
