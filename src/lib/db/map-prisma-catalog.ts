@@ -106,7 +106,7 @@ export function mapOpportunityRecord(row: OpportunityRow): Opportunity {
     slug: row.slug ?? undefined,
     title: row.title,
     organizationId: row.organizationId,
-    organizationName: row.organization.name,
+    organizationName: row.organization?.name?.trim() || "Organization",
     category: parseCategory(row.category?.nameEn ?? "Jobs"),
     location: row.location ?? "",
     deadline,

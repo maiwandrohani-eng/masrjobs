@@ -67,7 +67,7 @@ export async function loadPublishedOpportunityRows(
         where: {
           status: "PUBLISHED",
           organization: {
-            isActive: true,
+            /** Do not require `isActive`: a paused org account should not hide already-published roles. */
             verificationStatus: { not: "REJECTED" },
           },
         },
