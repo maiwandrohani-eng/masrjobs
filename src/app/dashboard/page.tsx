@@ -23,7 +23,7 @@ export default function DashboardHubPage() {
       <PageIntro
         eyebrow="Dashboard"
         title="Choose your workspace"
-        description="MasrJobs.org separates experiences for applicants, employers, and platform administrators. Use the demo login hints on the sign-in page to open each view."
+        description="MasrJobs.org separates experiences for applicants, employers, and platform administrators. Sign in with the account type you registered, then pick the matching workspace below."
       />
       <div className="grid gap-4 sm:grid-cols-3">
         <Link

@@ -66,7 +66,7 @@ export default function AdminDashboardPage() {
           setAuditRows([]);
           setAuditMessage(
             res.status === 403
-              ? "Sign in with a production admin account to load Neon audit logs."
+              ? "Sign in with an administrator account that can read audit logs."
               : typeof body.error === "string"
                 ? body.error
                 : "Could not load audit logs.",
@@ -90,6 +90,7 @@ export default function AdminDashboardPage() {
   const rejectedCount = orgListings.filter((l) => l.status === "Rejected").length;
   const closedCount = orgListings.filter((l) => l.status === "Closed").length;
   const totalUsersDisplay = 1240 + registeredUsers.length;
+  const previewAuth = isDemoAuthEnabled();
 
   const managedExtras = orgSubmittedOpportunities.filter(
     (o) => o.visibility === "published" || o.visibility === "closed",
@@ -108,7 +109,11 @@ export default function AdminDashboardPage() {
       <PageShell className="!py-0">
         <PageIntro
           title="Admin console"
-          description="Restricted to platform administrators. With demo auth, use an email containing “admin”. In production, use an ADMIN account from Neon."
+          description={
+            previewAuth
+              ? "Restricted to administrators. With preview auth enabled, sign in using an email address that contains “admin”."
+              : "Restricted to platform administrators. Sign in with an administrator account issued for MasrJobs.org."
+          }
         />
         <Link
           href="/login"
@@ -121,7 +126,12 @@ export default function AdminDashboardPage() {
   }
 
   const stats = [
-    { label: "Total users (demo baseline + registrations)", value: String(totalUsersDisplay) },
+    {
+      label: previewAuth
+        ? "Users shown (sample baseline + registrations)"
+        : "Users shown (reference total + registrations)",
+      value: String(totalUsersDisplay),
+    },
     {
       label: "Organizations in directory",
       value: String(organizations.length),
@@ -135,7 +145,7 @@ export default function AdminDashboardPage() {
       value: String(pendingOpportunityApprovals.length),
     },
     { label: "Published opportunities (public)", value: String(publishedCount) },
-    { label: "Applications (this browser)", value: String(applications.length) },
+    { label: "Applications (dashboard view)", value: String(applications.length) },
     { label: "Rejected listings (employer view)", value: String(rejectedCount) },
     { label: "Closed listings (employer view)", value: String(closedCount) },
   ];
@@ -145,7 +155,11 @@ export default function AdminDashboardPage() {
       <PageIntro
         eyebrow="Administration"
         title={`Hello, ${session.displayName}`}
-        description="Statistics, moderation queues, and listing controls. Actions update demo state stored in this browser."
+        description={
+          previewAuth
+            ? "Statistics, moderation queues, and listing controls. With preview auth, some actions are stored only in this browser."
+            : "Statistics, moderation queues, and listing controls. Data is loaded from your MasrJobs.org database."
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -189,7 +203,11 @@ export default function AdminDashboardPage() {
                           type="button"
                           onClick={() => {
                             approveOrganization(o.id);
-                            alert("Organization approved for posting in this browser.");
+                            alert(
+                              previewAuth
+                                ? "Organization approved for this preview session."
+                                : "Organization approved.",
+                            );
                           }}
                           className="rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60"
                         >
@@ -373,12 +391,21 @@ export default function AdminDashboardPage() {
         <div className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
           <h2 className="text-base font-bold text-brand-navy">Manage users</h2>
           <p className="mt-2 text-sm text-foreground/70">
-            Registrations captured in this demo: {registeredUsers.length}. Production
-            would sync to a secure directory with search and suspension tools.
+            {previewAuth ? (
+              <>
+                Registrations captured in this preview session: {registeredUsers.length}. A
+                full directory would load from the database.
+              </>
+            ) : (
+              <>
+                People who registered through this site: {registeredUsers.length}. Extend
+                this list from your user directory in the database when you add admin APIs.
+              </>
+            )}
           </p>
           <ul className="mt-4 max-h-48 space-y-2 overflow-y-auto text-sm text-foreground/80">
             {registeredUsers.length === 0 ? (
-              <li className="text-foreground/55">No local registrations yet.</li>
+              <li className="text-foreground/55">No registrations in this list yet.</li>
             ) : (
               registeredUsers.map((u) => (
                 <li key={u.email} className="rounded-lg border border-brand-border px-3 py-2">
@@ -407,8 +434,8 @@ export default function AdminDashboardPage() {
       <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
         <h2 className="text-base font-bold text-brand-navy">Manage categories</h2>
         <p className="mt-2 text-sm text-foreground/70">
-          Categories drive filters across the public site. Production would persist edits
-          to the database.
+          These labels match the categories used on the public site. Persisting edits from
+          here can be wired to your database when you add admin category APIs.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {CATEGORY_PRESETS.map((c) => (
@@ -472,14 +499,16 @@ export default function AdminDashboardPage() {
           type="button"
           className="mt-4 rounded-xl border border-brand-border bg-white px-5 py-2.5 text-sm font-semibold text-brand-navy hover:bg-brand-muted"
           onClick={() =>
-            alert("Demo only: wire this button to a secure export endpoint.")
+            alert(
+              "CSV export is not available from the dashboard yet. Use your database or analytics tools for bulk reports.",
+            )
           }
         >
           Download sample report
         </button>
       </section>
 
-      {!isDemoAuthEnabled() ? (
+      {!previewAuth ? (
         <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
           <h2 className="text-base font-bold text-brand-navy">Account security</h2>
           <p className="mt-1 text-sm text-foreground/70">

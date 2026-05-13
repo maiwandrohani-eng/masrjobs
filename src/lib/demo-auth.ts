@@ -1,4 +1,4 @@
-/** When true, legacy client-only demo login (localStorage) is enabled. Disable in production. */
+/** When true, browser-only preview sign-in (localStorage) is enabled. Keep false in production. */
 export function isDemoAuthEnabled(): boolean {
   return process.env.NEXT_PUBLIC_ENABLE_DEMO_AUTH === "true";
 }

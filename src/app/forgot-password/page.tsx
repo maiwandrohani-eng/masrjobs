@@ -15,9 +15,12 @@ export default function ForgotPasswordPage() {
         />
         {demo ? (
           <div className="rounded-2xl border border-brand-border bg-white p-6 text-sm text-foreground/70 shadow-sm">
-            Password reset is disabled while demo auth is on. Use any demo password, or turn off{" "}
-            <code className="rounded bg-brand-muted/50 px-1">NEXT_PUBLIC_ENABLE_DEMO_AUTH</code>{" "}
-            for real email-based reset.
+            Password reset is unavailable in browser-only preview sign-in. Use full
+            sign-in with database accounts to reset by email, or ask your administrator.
+            <p className="mt-3 text-xs text-foreground/55">
+              Developers: set <code className="rounded bg-brand-muted/50 px-1">NEXT_PUBLIC_ENABLE_DEMO_AUTH</code>{" "}
+              to <code className="rounded bg-brand-muted/50 px-1">false</code> to enable email reset.
+            </p>
             <p className="mt-4">
               <Link href="/login" className="font-semibold text-brand-gold underline">
                 Back to sign in

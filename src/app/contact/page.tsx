@@ -13,7 +13,7 @@ export default function ContactPage() {
         <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
           <ContactForm />
           <aside className="space-y-4 rounded-2xl border border-brand-border bg-brand-muted/50 p-6">
-            <h2 className="text-sm font-bold text-brand-navy">Office (demo)</h2>
+            <h2 className="text-sm font-bold text-brand-navy">Office</h2>
             <p className="text-sm text-foreground/75">
               Cairo, Egypt
               <br />

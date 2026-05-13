@@ -2,12 +2,7 @@
 
 import { useState } from "react";
 
-type Props = {
-  /** When demo auth is on, button label includes (demo); behavior still uses API if DB is configured. */
-  demoAuthEnabled: boolean;
-};
-
-export function NewsletterSignup({ demoAuthEnabled }: Props) {
+export function NewsletterSignup() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -95,11 +90,7 @@ export function NewsletterSignup({ demoAuthEnabled }: Props) {
         disabled={status === "loading"}
         className="shrink-0 rounded-xl bg-brand-navy px-6 py-2.5 text-sm font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 disabled:opacity-60"
       >
-        {status === "loading"
-          ? "Saving…"
-          : demoAuthEnabled
-            ? "Join list (demo)"
-            : "Join list"}
+        {status === "loading" ? "Saving…" : "Join list"}
       </button>
     </form>
   );

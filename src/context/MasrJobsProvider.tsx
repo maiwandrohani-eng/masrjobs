@@ -121,7 +121,7 @@ type MasrJobsContextValue = {
   hydrated: boolean;
 
   opportunities: Opportunity[];
-  /** Directory organizations (Neon) or demo fixtures. */
+  /** Directory organizations (Neon) or local preview fixtures. */
   organizations: Organization[];
   getOpportunityById: (id: string) => Opportunity | undefined;
   savedIds: Set<string>;
@@ -170,7 +170,7 @@ type MasrJobsContextValue = {
   applicantProfile: ApplicantProfile | null;
   setApplicantProfile: (profile: ApplicantProfile) => void;
 
-  /** Sample opportunity IDs removed from public browse after close (demo). */
+  /** Sample opportunity IDs removed from public browse after close (preview catalog). */
   suppressedCatalogIds: readonly string[];
 
   /** Organization-submitted opportunities (all visibilities) for admin / detail resolve. */
@@ -740,7 +740,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
           serverId = data.id;
         }
       } catch {
-        /* Neon optional — local demo still works */
+        /* Neon optional — local preview still works */
       }
 
       const rec: ApplicationRecord = {
@@ -935,7 +935,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
           audience: { kind: "org", email: normEmail(row.email) },
           title: "Account approved",
           message:
-            "Your organization can now post opportunities on MasrJobs.org (demo: stored in this browser).",
+            "Your organization can now post opportunities on MasrJobs.org for this preview session.",
         });
         queueMicrotask(() => {
           postTransactionalEmail("/api/admin/transactional-email", {
@@ -979,7 +979,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
           audience: { kind: "org", email: normEmail(row.email) },
           title: "Account not approved",
           message:
-            "Your organization registration was not approved in this demo workflow.",
+            "Your organization registration was not approved in this preview session.",
         });
         queueMicrotask(() => {
           postTransactionalEmail("/api/admin/transactional-email", {

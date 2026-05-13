@@ -85,8 +85,9 @@ export default function OrganizationDashboardPage() {
           {isDemoAuthEnabled() ? (
             <>
               {" "}
-              Demo: approve your work email from the admin console, or sign in with a
-              verified sample employer (e.g. Care Egypt Foundation).
+              Optional local preview: approve a pending organization from the admin
+              console, or sign in with a seeded employer account (e.g. Care Egypt Foundation)
+              if your database includes sample data.
             </>
           ) : (
             <>
@@ -261,9 +262,9 @@ export default function OrganizationDashboardPage() {
         {orgApps.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-dashed border-brand-border bg-white px-6 py-10 text-center shadow-sm">
             <p className="text-sm text-foreground/70">
-              Applications appear here when candidates apply to opportunities linked to
-              your organization in this demo. Use an individual account to apply to a
-              published role from your organization.
+              Applications appear here when candidates apply through MasrJobs.org to your
+              published listings. Ask applicants to use an individual account and apply to
+              your live roles from the opportunities directory.
             </p>
           </div>
         ) : (

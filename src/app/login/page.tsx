@@ -10,7 +10,7 @@ export default function LoginPage() {
         <PageIntro
           eyebrow="Welcome back"
           title="Sign in to MasrJobs.org"
-          description="Access your applicant workspace, employer tools, or admin console. Production builds use secure credentials; enable demo auth only for local UX previews."
+          description="Sign in with your MasrJobs.org account to open your applicant workspace, employer tools, or administrator console."
         />
         <Suspense fallback={<p className="text-sm text-foreground/60">Loading…</p>}>
           <LoginForm />

@@ -20,8 +20,8 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const resetOk = searchParams.get("reset") === "1";
   const { login } = useMasrJobs();
-  const demo = isDemoAuthEnabled();
-  const [email, setEmail] = useState(demo ? "applicant@demo.org" : "");
+  const previewAuth = isDemoAuthEnabled();
+  const [email, setEmail] = useState(previewAuth ? "preview.applicant@masrjobs.local" : "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,7 +34,7 @@ export function LoginForm() {
       return;
     }
 
-    if (demo) {
+    if (previewAuth) {
       const role = inferRole(email);
       const local = email.split("@")[0] ?? "User";
       const session: SessionUser = {
@@ -80,15 +80,16 @@ export function LoginForm() {
       onSubmit={(e) => void onSubmit(e)}
       className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm md:p-8"
     >
-      {resetOk && !demo ? (
+      {resetOk && !previewAuth ? (
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
           Your password was updated. Sign in with your new password.
         </p>
       ) : null}
-      {demo ? (
+      {previewAuth ? (
         <p className="text-sm text-foreground/70">
-          Demo login: use an email containing <strong>admin</strong>,{" "}
-          <strong>org</strong>, or anything else for an applicant account.
+          Preview sign-in: use an email containing <strong>admin</strong>,{" "}
+          <strong>org</strong>, or anything else for an applicant account. Password is not
+          checked in this mode.
         </p>
       ) : (
         <p className="text-sm text-foreground/70">
@@ -114,12 +115,12 @@ export function LoginForm() {
         onChange={(e) => setPassword(e.target.value)}
         className="mt-1 w-full rounded-xl border border-brand-border bg-brand-muted/40 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
         autoComplete="current-password"
-        placeholder={demo ? "Any value in this demo" : ""}
+        placeholder={previewAuth ? "Any value (preview only)" : ""}
       />
       {error ? (
         <p className="mt-3 text-sm font-medium text-red-700">{error}</p>
       ) : null}
-      {!demo ? (
+      {!previewAuth ? (
         <p className="mt-2 text-right text-sm">
           <Link
             href="/forgot-password"

@@ -2,14 +2,11 @@ import Link from "next/link";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { PageIntro, PageShell } from "@/components/PageShell";
 import { ResourcesArticles } from "@/components/ResourcesArticles";
-import { isDemoAuthEnabled } from "@/lib/demo-auth";
 import { resourceArticleSummaries } from "@/lib/resources-articles";
 
 const articles = resourceArticleSummaries();
 
 export default function ResourcesPage() {
-  const demo = isDemoAuthEnabled();
-
   return (
     <div className="min-h-[60vh] bg-background">
       <PageShell>
@@ -24,7 +21,7 @@ export default function ResourcesPage() {
           <p className="mt-2 text-sm text-foreground/75">
             Subscribe to weekly digests of new grants, consultancies, and impact roles.
           </p>
-          <NewsletterSignup demoAuthEnabled={demo} />
+          <NewsletterSignup />
         </div>
         <p className="mt-6 text-sm text-foreground/65">
           Ready to search live roles?{" "}

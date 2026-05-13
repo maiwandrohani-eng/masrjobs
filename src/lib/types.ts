@@ -143,7 +143,7 @@ export interface SessionUser {
   email: string;
   displayName: string;
   organizationName?: string;
-  /** Links applicant submissions to this employer in the demo. */
+  /** Links applicant submissions to this employer (sample / preview data). */
   organizationId?: string;
 }
 
@@ -156,7 +156,7 @@ export interface ApplicationRecord {
   status: ApplicationStatus;
   submittedAt: string;
   coverLetter?: string;
-  /** When set, scopes the individual dashboard; older demo records may omit this. */
+  /** When set, scopes the individual dashboard; older records may omit this. */
   applicantEmail?: string;
   applicantDisplayName?: string;
   applicantFullName?: string;

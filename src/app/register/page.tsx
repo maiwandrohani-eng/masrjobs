@@ -8,7 +8,7 @@ export default function RegisterPage() {
         <PageIntro
           eyebrow="Join MasrJobs.org"
           title="Create your account"
-          description="Choose whether you are applying for opportunities or posting them on behalf of an organization. Admin accounts are assigned separately in production."
+          description="Choose whether you are applying for opportunities or posting them on behalf of an organization. Administrator accounts are issued separately by the platform team."
         />
         <RegisterForm />
       </PageShell>

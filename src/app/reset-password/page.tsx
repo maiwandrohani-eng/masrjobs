@@ -16,7 +16,7 @@ export default function ResetPasswordPage() {
         />
         {demo ? (
           <div className="rounded-2xl border border-brand-border bg-white p-6 text-sm text-foreground/70 shadow-sm">
-            Password reset is disabled while demo auth is on.
+            Password reset is unavailable in browser-only preview sign-in.
             <p className="mt-4">
               <Link href="/login" className="font-semibold text-brand-gold underline">
                 Back to sign in

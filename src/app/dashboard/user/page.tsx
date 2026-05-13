@@ -153,7 +153,11 @@ export default function UserDashboardPage() {
       <PageIntro
         eyebrow="Applicant"
         title={`Welcome, ${session.displayName}`}
-        description="Your profile summary, saved opportunities, and application tracker. Demo data is stored in this browser only."
+        description={
+          isDemoAuthEnabled()
+            ? "Your profile summary, saved opportunities, and application tracker. With preview auth, data for this session stays in this browser."
+            : "Your profile summary, saved opportunities, and application activity for your MasrJobs.org account."
+        }
       />
 
       <section className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
@@ -166,9 +170,9 @@ export default function UserDashboardPage() {
         </dl>
         <form onSubmit={saveProfile} className="mt-6 border-t border-brand-border pt-6">
           <p className="text-sm text-foreground/70">
-            These details are used for internal applications on MasrJobs.org and stored in
-            your browser until you sign in on another device. CV and LinkedIn links are
-            required for a complete internal application where the form asks for them.
+            These details are used for internal applications on MasrJobs.org. They are
+            stored with your session on this device and should be kept up to date. CV and
+            LinkedIn links are required when an opportunity asks for them on the apply form.
           </p>
           <label className="mt-4 block text-xs font-semibold text-brand-navy">
             Full name <span className="text-red-600">*</span>

@@ -59,8 +59,14 @@ export function ContactForm() {
       </button>
       {sent ? (
         <p className="mt-4 text-sm font-medium text-brand-navy">
-          Thank you — this demo form captured your message locally. In production this
-          would email the MasrJobs.org team or create a support ticket.
+          Thanks — your message is noted here. For a reliable response, please also email{" "}
+          <a
+            href="mailto:hello@masrjobs.org"
+            className="font-semibold text-brand-gold underline decoration-brand-gold/50 underline-offset-2"
+          >
+            hello@masrjobs.org
+          </a>
+          .
         </p>
       ) : null}
     </form>
