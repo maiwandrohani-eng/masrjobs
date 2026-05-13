@@ -151,6 +151,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             ) : null}
           </div>
           <nav className="mt-3 flex flex-col gap-1">
+            <Link
+              href="/"
+              className="flex items-center gap-2 rounded-lg border border-brand-border/80 bg-brand-muted/30 px-3 py-2 text-sm font-semibold text-brand-navy hover:border-brand-gold/40 hover:bg-brand-gold-muted/50"
+            >
+              <span aria-hidden className="text-brand-gold">
+                ←
+              </span>
+              Back to home
+            </Link>
             {nav.map((item) => (
               <Link
                 key={item.href}

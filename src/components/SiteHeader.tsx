@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
 
 const nav = [
+  { href: "/", label: "Home" },
   { href: "/opportunities", label: "Opportunities" },
   { href: "/organizations", label: "Organizations" },
   { href: "/resources", label: "Resources" },

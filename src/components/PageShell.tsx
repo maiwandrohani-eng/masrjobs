@@ -1,14 +1,19 @@
 import { cn } from "@/lib/cn";
+import { BackToHomeBar } from "@/components/BackToHomeBar";
 
 export function PageShell({
   children,
   className,
+  showBackToHome = true,
 }: {
   children: React.ReactNode;
   className?: string;
+  /** Set false to hide the “Back to home” row (e.g. nested shells). */
+  showBackToHome?: boolean;
 }) {
   return (
     <div className={cn("mx-auto w-full max-w-6xl px-4 py-8 md:py-10", className)}>
+      {showBackToHome ? <BackToHomeBar /> : null}
       {children}
     </div>
   );
