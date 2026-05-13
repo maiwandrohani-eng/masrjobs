@@ -25,11 +25,25 @@ export const authOptions: NextAuthOptions = {
         if (!prisma || !credentials?.email || !credentials?.password) return null;
 
         const email = String(credentials.email).trim().toLowerCase();
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({
+          where: { email },
+          include: {
+            organization: { select: { isActive: true } },
+          },
+        });
         if (!user?.isActive) return null;
 
         const valid = await compare(String(credentials.password), user.passwordHash);
         if (!valid) return null;
+
+        if (
+          user.role === "ORG_USER" &&
+          user.organizationId &&
+          user.organization &&
+          !user.organization.isActive
+        ) {
+          return null;
+        }
 
         const name =
           [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||

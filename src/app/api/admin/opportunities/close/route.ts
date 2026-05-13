@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { z } from "zod";
+import { assertAppOrigin } from "@/lib/assert-app-origin";
 import { authOptions } from "@/lib/auth-options";
 import { getPrisma } from "@/lib/prisma";
 
@@ -9,6 +10,10 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  if (!assertAppOrigin(req)) {
+    return NextResponse.json({ ok: false, error: "Invalid origin" }, { status: 403 });
+  }
+
   const session = await getServerSession(authOptions);
   if (!session?.user || session.user.role !== "ADMIN") {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });

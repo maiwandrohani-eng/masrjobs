@@ -25,7 +25,10 @@ export async function loadDirectoryOrganizations(
 ): Promise<Organization[]> {
   return safe(async () => {
     const rows = await prisma.organization.findMany({
-      where: { verificationStatus: { not: "REJECTED" } },
+      where: {
+        verificationStatus: { not: "REJECTED" },
+        isActive: true,
+      },
       orderBy: { name: "asc" },
     });
     return rows.map(mapOrganizationRecord);
@@ -38,7 +41,13 @@ export async function loadPublishedOpportunityRows(
   return safe(
     () =>
       prisma.opportunity.findMany({
-        where: { status: "PUBLISHED" },
+        where: {
+          status: "PUBLISHED",
+          organization: {
+            isActive: true,
+            verificationStatus: { not: "REJECTED" },
+          },
+        },
         include: opportunityInclude,
         orderBy: { publishedAt: "desc" },
       }),

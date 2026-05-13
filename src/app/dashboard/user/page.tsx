@@ -155,13 +155,28 @@ export default function UserDashboardPage() {
         title={`Welcome, ${session.displayName}`}
         description={
           isDemoAuthEnabled()
-            ? "Your profile summary, saved opportunities, and application tracker. With preview auth, data for this session stays in this browser."
+            ? "Your profile summary, saved opportunities, and application tracker. With preview auth, you can still use the form below; sign in with a database account to change your password."
             : "Your profile summary, saved opportunities, and application activity for your MasrJobs.org account."
         }
       />
 
-      <section className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
-        <h2 className="text-base font-bold text-brand-navy">Applicant profile</h2>
+      <p className="mb-6 flex flex-wrap items-center gap-3 text-sm">
+        <a
+          href="#edit-applicant-profile"
+          className="inline-flex rounded-xl bg-brand-navy px-4 py-2 font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50"
+        >
+          Edit profile
+        </a>
+        <span className="text-foreground/65">
+          Update name, phone, CV link, and optional portfolio links used when you apply.
+        </span>
+      </p>
+
+      <section
+        id="edit-applicant-profile"
+        className="scroll-mt-24 rounded-2xl border border-brand-border bg-white p-6 shadow-sm"
+      >
+        <h2 className="text-base font-bold text-brand-navy">Edit your applicant profile</h2>
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-foreground/55">Account email</dt>
@@ -235,7 +250,7 @@ export default function UserDashboardPage() {
         </form>
       </section>
 
-      {!isDemoAuthEnabled() ? (
+      {session?.userId ? (
         <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
           <h2 className="text-base font-bold text-brand-navy">Account security</h2>
           <p className="mt-1 text-sm text-foreground/70">

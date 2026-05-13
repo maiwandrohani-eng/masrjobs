@@ -26,6 +26,7 @@ export function sessionUserFromNextAuth(session: Session | null): SessionUser | 
     role,
     email: u.email.trim().toLowerCase(),
     displayName,
+    userId: u.id,
     organizationId: u.organizationId ?? undefined,
   };
 }

@@ -64,7 +64,10 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
                   )}
                 </div>
               </div>
-              <p className="mt-4 flex-1 text-sm leading-relaxed text-foreground/75">
+              <p
+                className="mt-4 flex-1 text-sm leading-relaxed text-foreground/75 line-clamp-10"
+                title={org.description.length > 400 ? org.description : undefined}
+              >
                 {org.description}
               </p>
               <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -127,7 +130,12 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
                   <MapPin className="h-3.5 w-3.5 shrink-0 text-brand-gold" aria-hidden />
                   {org.location}
                 </p>
-                <p className="mt-2 line-clamp-2 text-sm text-foreground/70">{org.description}</p>
+                <p
+                  className="mt-2 line-clamp-4 text-sm text-foreground/70"
+                  title={org.description.length > 220 ? org.description : undefined}
+                >
+                  {org.description}
+                </p>
               </div>
               <div className="mt-3 flex shrink-0 flex-col gap-2 sm:mt-0 sm:items-end">
                 <Link

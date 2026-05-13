@@ -65,12 +65,18 @@ enum AdminActionType {
   USER_CREATED
   USER_UPDATED
   USER_DISABLED
+  USER_REACTIVATED
+  USER_DELETED
   ORG_APPROVED
   ORG_REJECTED
+  ORGANIZATION_DEACTIVATED
+  ORGANIZATION_REACTIVATED
+  ORGANIZATION_DELETED
   OPPORTUNITY_APPROVED
   OPPORTUNITY_REJECTED
   OPPORTUNITY_EDITED
   OPPORTUNITY_REMOVED
+  OPPORTUNITY_DELETED
   CATEGORY_CREATED
   CATEGORY_UPDATED
   CATEGORY_DELETED
@@ -131,6 +137,8 @@ model Organization {
   profileCompleteness Int                  @default(0)
   verificationStatus OrgVerificationStatus @default(PENDING)
   verifiedAt         DateTime?
+  /** When false, the org is hidden from the public directory and cannot post. */
+  isActive           Boolean               @default(true)
 
   users         User[]
   opportunities Opportunity[]
@@ -319,7 +327,7 @@ model AdminActionLog {
 
   action      AdminActionType
   actorUserId String?
-  actorUser   User?           @relation("AdminActor", fields: [actorUserId], references: [id])
+  actorUser   User?           @relation("AdminActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   targetType String?
   targetId   String?

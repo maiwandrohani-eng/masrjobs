@@ -24,9 +24,10 @@ export async function GET() {
 
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
-    select: { verificationStatus: true },
+    select: { verificationStatus: true, isActive: true },
   });
 
-  const canPost = org?.verificationStatus === "VERIFIED";
+  const canPost =
+    org?.isActive === true && org?.verificationStatus === "VERIFIED";
   return NextResponse.json({ ok: true, canPost });
 }

@@ -117,6 +117,8 @@ function notificationVisibleForSession(
 type MasrJobsContextValue = {
   session: SessionUser | null;
   login: (user: SessionUser) => void;
+  /** Clears browser preview sign-in only; use before signing in with a database account while preview auth is enabled. */
+  exitPreviewSession: () => void;
   logout: () => void;
   hydrated: boolean;
 
@@ -175,6 +177,9 @@ type MasrJobsContextValue = {
 
   /** Organization-submitted opportunities (all visibilities) for admin / detail resolve. */
   orgSubmittedOpportunities: Opportunity[];
+
+  /** Re-fetch published catalog from the API (e.g. after updating organization directory fields). */
+  refreshPublicCatalog: () => void;
 };
 
 const MasrJobsContext = createContext<MasrJobsContextValue | null>(null);
@@ -276,7 +281,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const session = useMemo((): SessionUser | null => {
-    if (isDemoAuthEnabled()) return demoSession;
+    if (isDemoAuthEnabled() && demoSession) return demoSession;
     if (nextAuth.status === "loading") return null;
     return sessionUserFromNextAuth(nextAuth.data);
   }, [demoSession, nextAuth.status, nextAuth.data]);
@@ -310,9 +315,9 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
 
   const hydrated = useMemo(() => {
     if (!localStorageReady) return false;
-    if (isDemoAuthEnabled()) return true;
+    if (isDemoAuthEnabled() && demoSession) return true;
     return nextAuth.status !== "loading";
-  }, [localStorageReady, nextAuth.status]);
+  }, [localStorageReady, nextAuth.status, demoSession]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- single-pass browser restore */
   useEffect(() => {
@@ -537,12 +542,24 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
     setDemoSession(user);
   }, []);
 
+  const exitPreviewSession = useCallback(() => {
+    setDemoSession(null);
+    try {
+      localStorage.removeItem(STORAGE.session);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const logout = useCallback(() => {
     setDemoSession(null);
     setApplicantProfileState(null);
-    if (!isDemoAuthEnabled()) {
-      void signOut({ redirect: false });
+    try {
+      localStorage.removeItem(STORAGE.session);
+    } catch {
+      /* ignore */
     }
+    void signOut({ redirect: false });
   }, []);
 
   const setApplicantProfile = useCallback(
@@ -1278,6 +1295,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
     () => ({
       session,
       login,
+      exitPreviewSession,
       logout,
       hydrated,
       opportunities: publishedOpportunities,
@@ -1315,10 +1333,12 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       setApplicantProfile,
       suppressedCatalogIds,
       orgSubmittedOpportunities: extraOpportunities,
+      refreshPublicCatalog: refreshNeonCatalog,
     }),
     [
       session,
       login,
+      exitPreviewSession,
       logout,
       hydrated,
       publishedOpportunities,
@@ -1356,6 +1376,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       setApplicantProfile,
       suppressedCatalogIds,
       extraOpportunities,
+      refreshNeonCatalog,
     ],
   );
 

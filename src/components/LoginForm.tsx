@@ -19,8 +19,11 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resetOk = searchParams.get("reset") === "1";
-  const { login } = useMasrJobs();
+  const { login, exitPreviewSession } = useMasrJobs();
   const previewAuth = isDemoAuthEnabled();
+  const [signInMode, setSignInMode] = useState<"preview" | "database">(
+    previewAuth ? "preview" : "database",
+  );
   const [email, setEmail] = useState(previewAuth ? "preview.applicant@masrjobs.local" : "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -34,7 +37,7 @@ export function LoginForm() {
       return;
     }
 
-    if (previewAuth) {
+    if (previewAuth && signInMode === "preview") {
       const role = inferRole(email);
       const local = email.split("@")[0] ?? "User";
       const session: SessionUser = {
@@ -55,6 +58,10 @@ export function LoginForm() {
     if (!password) {
       setError("Please enter your password.");
       return;
+    }
+
+    if (previewAuth) {
+      exitPreviewSession();
     }
 
     setBusy(true);
@@ -80,17 +87,51 @@ export function LoginForm() {
       onSubmit={(e) => void onSubmit(e)}
       className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm md:p-8"
     >
-      {resetOk && !previewAuth ? (
+      {resetOk && (!previewAuth || signInMode === "database") ? (
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
           Your password was updated. Sign in with your new password.
         </p>
       ) : null}
       {previewAuth ? (
-        <p className="text-sm text-foreground/70">
-          Preview sign-in: use an email containing <strong>admin</strong>,{" "}
-          <strong>org</strong>, or anything else for an applicant account. Password is not
-          checked in this mode.
-        </p>
+        <div className="rounded-xl border border-brand-border bg-brand-muted/50 p-3 text-sm text-foreground/80">
+          <p className="font-semibold text-brand-navy">How do you want to sign in?</p>
+          <div className="mt-3 flex flex-col gap-2">
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-transparent px-2 py-1.5 hover:bg-white/80 has-[:checked]:border-brand-gold/50 has-[:checked]:bg-white">
+              <input
+                type="radio"
+                name="signInMode"
+                className="mt-1"
+                checked={signInMode === "preview"}
+                onChange={() => setSignInMode("preview")}
+              />
+              <span>
+                <span className="font-medium text-brand-navy">Preview (no password)</span>
+                <span className="mt-0.5 block text-xs text-foreground/65">
+                  Local demo only — email containing <strong>admin</strong>, <strong>org</strong>, or
+                  anything else for an applicant. Does not load your real employer profile from the
+                  database.
+                </span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-transparent px-2 py-1.5 hover:bg-white/80 has-[:checked]:border-brand-gold/50 has-[:checked]:bg-white">
+              <input
+                type="radio"
+                name="signInMode"
+                className="mt-1"
+                checked={signInMode === "database"}
+                onChange={() => setSignInMode("database")}
+              />
+              <span>
+                <span className="font-medium text-brand-navy">Database account (Neon)</span>
+                <span className="mt-0.5 block text-xs text-foreground/65">
+                  Use the email and password you registered with. Required to edit your applicant
+                  profile in the database, change your password, or update your organization’s public
+                  directory page.
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
       ) : (
         <p className="text-sm text-foreground/70">
           Sign in with the email and password you used at registration.
@@ -106,21 +147,25 @@ export function LoginForm() {
         className="mt-1 w-full rounded-xl border border-brand-border bg-brand-muted/40 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
         autoComplete="email"
       />
-      <label className="mt-4 block text-xs font-semibold text-brand-navy">
-        Password
-      </label>
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="mt-1 w-full rounded-xl border border-brand-border bg-brand-muted/40 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
-        autoComplete="current-password"
-        placeholder={previewAuth ? "Any value (preview only)" : ""}
-      />
+      {signInMode === "database" || !previewAuth ? (
+        <>
+          <label className="mt-4 block text-xs font-semibold text-brand-navy">
+            Password
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-brand-border bg-brand-muted/40 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
+            autoComplete="current-password"
+            placeholder={previewAuth ? "Your MasrJobs.org password" : ""}
+          />
+        </>
+      ) : null}
       {error ? (
         <p className="mt-3 text-sm font-medium text-red-700">{error}</p>
       ) : null}
-      {!previewAuth ? (
+      {signInMode === "database" || !previewAuth ? (
         <p className="mt-2 text-right text-sm">
           <Link
             href="/forgot-password"

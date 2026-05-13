@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
+import { EmployerOrganizationProfilePanel } from "@/components/EmployerOrganizationProfilePanel";
 import { PageIntro, PageShell } from "@/components/PageShell";
 import { OrgSubmitOpportunityForm } from "@/components/OrgSubmitOpportunityForm";
 import {
@@ -100,7 +101,11 @@ export default function OrganizationDashboardPage() {
       ) : null}
 
       <section className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
-        <h2 className="text-base font-bold text-brand-navy">Organization profile</h2>
+        <h2 className="text-base font-bold text-brand-navy">Organization account</h2>
+        <p className="mt-1 text-sm text-foreground/70">
+          Sign-in details and approval status. Edit how your organization appears publicly in the
+          section below.
+        </p>
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-foreground/55">Primary contact</dt>
@@ -123,7 +128,11 @@ export default function OrganizationDashboardPage() {
         </dl>
       </section>
 
-      {!isDemoAuthEnabled() ? (
+      <div className="mt-8">
+        <EmployerOrganizationProfilePanel />
+      </div>
+
+      {session?.userId ? (
         <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
           <h2 className="text-base font-bold text-brand-navy">Account security</h2>
           <p className="mt-1 text-sm text-foreground/70">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
+import { AdminNeonRegistryPanel } from "@/components/AdminNeonRegistryPanel";
 import { AdminSiteContactPanel } from "@/components/AdminSiteContactPanel";
 import { PageIntro, PageShell } from "@/components/PageShell";
 import { ListingStatusBadge } from "@/components/StatusBadge";
@@ -388,49 +389,9 @@ export default function AdminDashboardPage() {
         )}
       </section>
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
-          <h2 className="text-base font-bold text-brand-navy">Manage users</h2>
-          <p className="mt-2 text-sm text-foreground/70">
-            {previewAuth ? (
-              <>
-                Registrations captured in this preview session: {registeredUsers.length}. A
-                full directory would load from the database.
-              </>
-            ) : (
-              <>
-                People who registered through this site: {registeredUsers.length}. Extend
-                this list from your user directory in the database when you add admin APIs.
-              </>
-            )}
-          </p>
-          <ul className="mt-4 max-h-48 space-y-2 overflow-y-auto text-sm text-foreground/80">
-            {registeredUsers.length === 0 ? (
-              <li className="text-foreground/55">No registrations in this list yet.</li>
-            ) : (
-              registeredUsers.map((u) => (
-                <li key={u.email} className="rounded-lg border border-brand-border px-3 py-2">
-                  <span className="font-medium text-brand-navy">{u.displayName}</span>{" "}
-                  <span className="text-foreground/55">({u.role})</span>
-                  <div className="text-xs text-foreground/50">{u.email}</div>
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
-        <div className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
-          <h2 className="text-base font-bold text-brand-navy">Manage organizations</h2>
-          <p className="mt-2 text-sm text-foreground/70">
-            Verified and featured flags appear on the public directory.
-          </p>
-          <Link
-            href="/organizations"
-            className="mt-4 inline-flex text-sm font-semibold text-brand-gold underline decoration-brand-gold/50 underline-offset-2"
-          >
-            Open directory
-          </Link>
-        </div>
-      </section>
+      <div className="mt-8">
+        <AdminNeonRegistryPanel disabled={previewAuth} />
+      </div>
 
       <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
         <h2 className="text-base font-bold text-brand-navy">Manage categories</h2>

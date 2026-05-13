@@ -142,6 +142,8 @@ export interface SessionUser {
   role: UserRole;
   email: string;
   displayName: string;
+  /** Neon-backed account id (NextAuth). Omitted in local demo preview sessions. */
+  userId?: string;
   organizationName?: string;
   /** Links applicant submissions to this employer (sample / preview data). */
   organizationId?: string;
