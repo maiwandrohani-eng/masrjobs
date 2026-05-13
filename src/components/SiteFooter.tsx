@@ -1,0 +1,96 @@
+import Link from "next/link";
+
+const social: { href: string; abbr: string; label: string }[] = [
+  { href: "https://facebook.com/masrjobs", abbr: "f", label: "Facebook" },
+  { href: "https://instagram.com/masrjobs", abbr: "◎", label: "Instagram" },
+  { href: "https://x.com/masrjobs", abbr: "𝕏", label: "X" },
+  { href: "https://linkedin.com/company/masrjobs", abbr: "in", label: "LinkedIn" },
+  { href: "https://tiktok.com/@masrjobs", abbr: "♪", label: "TikTok" },
+  { href: "https://youtube.com/@masrjobs", abbr: "▶", label: "YouTube" },
+];
+
+export function SiteFooter() {
+  return (
+    <footer className="border-t border-brand-navy/20 bg-brand-navy text-white">
+      <div className="mx-auto w-full max-w-6xl px-4 py-10">
+        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+          <div className="max-w-md">
+            <div className="text-base font-semibold text-brand-gold-soft">
+              MasrJobs.org
+            </div>
+            <p className="mt-2 text-sm text-white/80">
+              Egypt’s Development & Social Impact Jobs Platform.
+            </p>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              {social.map(({ href, abbr, label }) => (
+                <a
+                  key={href}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-9 min-w-9 items-center justify-center rounded-full border border-white/20 px-2 text-xs font-semibold text-white/90 transition-colors hover:border-brand-gold-soft hover:text-brand-gold-soft"
+                  aria-label={label}
+                  title={label}
+                >
+                  {abbr}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-3">
+            <div className="flex flex-col gap-2">
+              <div className="font-semibold text-brand-gold-soft">Platform</div>
+              <Link
+                href="/opportunities"
+                className="text-white/75 hover:text-brand-gold-soft"
+              >
+                Opportunities
+              </Link>
+              <Link
+                href="/organizations"
+                className="text-white/75 hover:text-brand-gold-soft"
+              >
+                Organizations
+              </Link>
+              <Link
+                href="/resources"
+                className="text-white/75 hover:text-brand-gold-soft"
+              >
+                Resources
+              </Link>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="font-semibold text-brand-gold-soft">Company</div>
+              <Link href="/about" className="text-white/75 hover:text-brand-gold-soft">
+                About
+              </Link>
+              <Link href="/contact" className="text-white/75 hover:text-brand-gold-soft">
+                Contact
+              </Link>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="font-semibold text-brand-gold-soft">Legal</div>
+              <Link href="/terms" className="text-white/75 hover:text-brand-gold-soft">
+                Terms
+              </Link>
+              <Link href="/privacy" className="text-white/75 hover:text-brand-gold-soft">
+                Privacy
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-2 border-t border-white/15 pt-6 text-xs text-white/60 md:flex-row md:items-center md:justify-between">
+          <div>© 2026 MasrJobs.org. All rights reserved.</div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2 w-2 rounded-full bg-brand-gold" />
+            <span className="text-white/70">
+              Built for Egypt’s social impact ecosystem.
+            </span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}

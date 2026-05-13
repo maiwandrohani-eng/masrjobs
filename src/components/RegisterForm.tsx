@@ -1,0 +1,245 @@
+"use client";
+
+import { signIn } from "next-auth/react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useMasrJobs } from "@/context/MasrJobsProvider";
+import { isDemoAuthEnabled } from "@/lib/demo-auth";
+import { SAMPLE_ORGANIZATIONS } from "@/lib/sample-data";
+import type { PendingOrgRecord, SessionUser, UserRole } from "@/lib/types";
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function RegisterForm() {
+  const router = useRouter();
+  const { login, registerPendingOrganization, registerUserProfile } =
+    useMasrJobs();
+  const demo = isDemoAuthEnabled();
+  const [role, setRole] = useState<UserRole>("individual");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [orgName, setOrgName] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!name.trim() || !email.includes("@")) {
+      setError("Please enter your name and a valid email.");
+      return;
+    }
+    if (role === "organization" && !orgName.trim()) {
+      setError("Please enter your organization name.");
+      return;
+    }
+
+    if (demo) {
+      const trimmedOrg = orgName.trim();
+      const matched =
+        role === "organization"
+          ? SAMPLE_ORGANIZATIONS.find(
+              (o) => o.name.toLowerCase() === trimmedOrg.toLowerCase(),
+            )
+          : undefined;
+      const session: SessionUser = {
+        role,
+        email,
+        displayName: name.trim(),
+        organizationName:
+          role === "organization" ? trimmedOrg : undefined,
+        organizationId:
+          matched?.id ?? (role === "organization" ? "org-demo" : undefined),
+      };
+      registerUserProfile({
+        email,
+        displayName: name.trim(),
+        role,
+        registeredAt: today(),
+      });
+      if (role === "organization") {
+        const needsApproval = !matched?.verified;
+        if (needsApproval) {
+          const pending: PendingOrgRecord = {
+            id: `porg-${Date.now()}`,
+            name: trimmedOrg,
+            email,
+            submittedAt: today(),
+          };
+          registerPendingOrganization(pending);
+        }
+      }
+      login(session);
+      if (role === "organization") router.push("/dashboard/organization");
+      else router.push("/dashboard/user");
+      return;
+    }
+
+    if (password.length < 10) {
+      setError("Password must be at least 10 characters.");
+      return;
+    }
+
+    setBusy(true);
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email.trim(),
+        password,
+        name: name.trim(),
+        role: role === "organization" ? "organization" : "individual",
+        organizationName:
+          role === "organization" ? orgName.trim() : undefined,
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error?: unknown;
+    };
+    if (!res.ok) {
+      setBusy(false);
+      if (res.status === 409) {
+        setError("That email is already registered. Try logging in.");
+      } else if (typeof data.error === "string") {
+        setError(data.error);
+      } else {
+        setError("Registration failed. Check your details and try again.");
+      }
+      return;
+    }
+
+    const sign = await signIn("credentials", {
+      email: email.trim().toLowerCase(),
+      password,
+      redirect: false,
+    });
+    setBusy(false);
+    if (sign?.error) {
+      setError("Account created but sign-in failed. Please log in manually.");
+      router.push("/login");
+      return;
+    }
+
+    router.push(
+      role === "organization"
+        ? "/dashboard/organization"
+        : "/dashboard/user",
+    );
+    router.refresh();
+  };
+
+  return (
+    <form
+      onSubmit={(e) => void onSubmit(e)}
+      className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm md:p-8"
+    >
+      <fieldset>
+        <legend className="text-xs font-semibold text-brand-navy">
+          I am registering as
+        </legend>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <label className="flex flex-1 cursor-pointer items-center gap-2 rounded-xl border border-brand-border bg-brand-muted/30 px-4 py-3 has-[:checked]:border-brand-gold has-[:checked]:bg-brand-gold-muted">
+            <input
+              type="radio"
+              name="role"
+              checked={role === "individual"}
+              onChange={() => setRole("individual")}
+              className="text-brand-gold accent-brand-gold"
+            />
+            <span className="text-sm font-medium text-brand-navy">
+              Individual applicant
+            </span>
+          </label>
+          <label className="flex flex-1 cursor-pointer items-center gap-2 rounded-xl border border-brand-border bg-brand-muted/30 px-4 py-3 has-[:checked]:border-brand-gold has-[:checked]:bg-brand-gold-muted">
+            <input
+              type="radio"
+              name="role"
+              checked={role === "organization"}
+              onChange={() => setRole("organization")}
+              className="text-brand-gold accent-brand-gold"
+            />
+            <span className="text-sm font-medium text-brand-navy">
+              Organization / employer
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <label className="mt-6 block text-xs font-semibold text-brand-navy">
+        Full name
+      </label>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        className="mt-1 w-full rounded-xl border border-brand-border bg-brand-muted/40 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
+        placeholder="e.g. Nour El-Din"
+      />
+
+      {role === "organization" ? (
+        <>
+          <label className="mt-4 block text-xs font-semibold text-brand-navy">
+            Organization name
+          </label>
+          <input
+            value={orgName}
+            onChange={(e) => setOrgName(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-brand-border bg-brand-muted/40 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
+            placeholder="e.g. Care Egypt Foundation"
+          />
+        </>
+      ) : null}
+
+      <label className="mt-4 block text-xs font-semibold text-brand-navy">
+        Work email
+      </label>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="mt-1 w-full rounded-xl border border-brand-border bg-brand-muted/40 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
+        placeholder="you@organization.org"
+      />
+
+      {!demo ? (
+        <>
+          <label className="mt-4 block text-xs font-semibold text-brand-navy">
+            Password (min 10 characters)
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-brand-border bg-brand-muted/40 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
+            autoComplete="new-password"
+          />
+        </>
+      ) : null}
+
+      {error ? (
+        <p className="mt-3 text-sm font-medium text-red-700">{error}</p>
+      ) : null}
+
+      <button
+        type="submit"
+        disabled={busy}
+        className="mt-6 w-full rounded-xl bg-brand-gold py-3 text-sm font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-soft disabled:opacity-60"
+      >
+        {busy ? "Creating account…" : "Create account"}
+      </button>
+      <p className="mt-4 text-center text-sm text-foreground/70">
+        Already registered?{" "}
+        <Link
+          href="/login"
+          className="font-semibold text-brand-gold underline decoration-brand-gold/50 underline-offset-2"
+        >
+          Log in
+        </Link>
+      </p>
+    </form>
+  );
+}

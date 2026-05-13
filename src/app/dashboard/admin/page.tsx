@@ -1,0 +1,481 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { PageIntro, PageShell } from "@/components/PageShell";
+import { ListingStatusBadge } from "@/components/StatusBadge";
+import { useMasrJobs } from "@/context/MasrJobsProvider";
+import { SAMPLE_ORGANIZATIONS } from "@/lib/sample-data";
+import type { OpportunityCategory } from "@/lib/types";
+
+const CATEGORY_PRESETS: OpportunityCategory[] = [
+  "NGO Jobs",
+  "Consultancies",
+  "Trainings",
+  "Volunteer Roles",
+  "Tenders",
+  "Grants",
+];
+
+type AuditRow = {
+  id: string;
+  action: string;
+  createdAt: string;
+  actorUser: { id: string; email: string | null } | null;
+};
+
+export default function AdminDashboardPage() {
+  const {
+    session,
+    hydrated,
+    applications,
+    opportunities,
+    orgListings,
+    orgSubmittedOpportunities,
+    pendingOrganizations,
+    pendingOpportunityApprovals,
+    registeredUsers,
+    approveOrganization,
+    rejectOrganization,
+    approveOpportunitySubmission,
+    rejectOpportunitySubmission,
+    deleteOpportunitySubmission,
+    adminCloseOpportunity,
+    toggleOpportunityFeatured,
+  } = useMasrJobs();
+
+  const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditMessage, setAuditMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!hydrated || session?.role !== "admin") return;
+    let cancelled = false;
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      setAuditLoading(true);
+      setAuditMessage(null);
+    });
+    void fetch("/api/admin/audit-logs")
+      .then(async (res) => {
+        const body = (await res.json()) as { items?: AuditRow[]; error?: string };
+        if (cancelled) return;
+        if (!res.ok) {
+          setAuditRows([]);
+          setAuditMessage(
+            res.status === 403
+              ? "Sign in with a production admin account to load Neon audit logs."
+              : typeof body.error === "string"
+                ? body.error
+                : "Could not load audit logs.",
+          );
+          return;
+        }
+        setAuditRows(body.items ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setAuditMessage("Could not load audit logs.");
+      })
+      .finally(() => {
+        if (!cancelled) setAuditLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, session?.role]);
+
+  const publishedCount = opportunities.length;
+  const rejectedCount = orgListings.filter((l) => l.status === "Rejected").length;
+  const closedCount = orgListings.filter((l) => l.status === "Closed").length;
+  const totalUsersDisplay = 1240 + registeredUsers.length;
+
+  const managedExtras = orgSubmittedOpportunities.filter(
+    (o) => o.visibility === "published" || o.visibility === "closed",
+  );
+
+  if (!hydrated) {
+    return (
+      <PageShell className="!py-0">
+        <p className="text-sm text-foreground/60">Loading…</p>
+      </PageShell>
+    );
+  }
+
+  if (!session || session.role !== "admin") {
+    return (
+      <PageShell className="!py-0">
+        <PageIntro
+          title="Admin console"
+          description="Restricted to platform administrators. With demo auth, use an email containing “admin”. In production, use an ADMIN account from Neon."
+        />
+        <Link
+          href="/login"
+          className="inline-flex rounded-xl bg-brand-navy px-5 py-2.5 text-sm font-semibold text-white"
+        >
+          Admin sign in
+        </Link>
+      </PageShell>
+    );
+  }
+
+  const stats = [
+    { label: "Total users (demo baseline + registrations)", value: String(totalUsersDisplay) },
+    {
+      label: "Organizations in directory",
+      value: String(SAMPLE_ORGANIZATIONS.length),
+    },
+    {
+      label: "Pending organization accounts",
+      value: String(pendingOrganizations.length),
+    },
+    {
+      label: "Pending opportunity reviews",
+      value: String(pendingOpportunityApprovals.length),
+    },
+    { label: "Published opportunities (public)", value: String(publishedCount) },
+    { label: "Applications (this browser)", value: String(applications.length) },
+    { label: "Rejected listings (employer view)", value: String(rejectedCount) },
+    { label: "Closed listings (employer view)", value: String(closedCount) },
+  ];
+
+  return (
+    <PageShell className="!py-0">
+      <PageIntro
+        eyebrow="Administration"
+        title={`Hello, ${session.displayName}`}
+        description="Statistics, moderation queues, and listing controls. Actions update demo state stored in this browser."
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((s) => (
+          <div
+            key={s.label}
+            className="rounded-2xl border border-brand-border border-l-4 border-l-brand-gold bg-white p-5 shadow-sm"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">
+              {s.label}
+            </p>
+            <p className="mt-2 text-2xl font-bold text-brand-navy">{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <section className="mt-10 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+        <h2 className="text-base font-bold text-brand-navy">Pending organizations</h2>
+        {pendingOrganizations.length === 0 ? (
+          <p className="mt-3 text-sm text-foreground/70">No pending registrations.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead className="border-b border-brand-border bg-brand-muted/60 text-xs uppercase text-foreground/55">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Organization</th>
+                  <th className="px-4 py-3 font-semibold">Email</th>
+                  <th className="px-4 py-3 font-semibold">Submitted</th>
+                  <th className="px-4 py-3 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingOrganizations.map((o) => (
+                  <tr key={o.id} className="border-b border-brand-border last:border-0">
+                    <td className="px-4 py-3 font-medium text-brand-navy">{o.name}</td>
+                    <td className="px-4 py-3 text-foreground/75">{o.email}</td>
+                    <td className="px-4 py-3 text-foreground/75">{o.submittedAt}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            approveOrganization(o.id);
+                            alert("Organization approved for posting in this browser.");
+                          }}
+                          className="rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm("Reject this registration?")) rejectOrganization(o.id);
+                          }}
+                          className="rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+        <h2 className="text-base font-bold text-brand-navy">Pending opportunities</h2>
+        {pendingOpportunityApprovals.length === 0 ? (
+          <p className="mt-3 text-sm text-foreground/70">
+            No listings awaiting approval.
+          </p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="border-b border-brand-border bg-brand-muted/60 text-xs uppercase text-foreground/55">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Title</th>
+                  <th className="px-4 py-3 font-semibold">Employer</th>
+                  <th className="px-4 py-3 font-semibold">Category</th>
+                  <th className="px-4 py-3 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingOpportunityApprovals.map((p) => (
+                  <tr key={p.id} className="border-b border-brand-border last:border-0">
+                    <td className="px-4 py-3 font-medium text-brand-navy">{p.title}</td>
+                    <td className="px-4 py-3 text-foreground/75">{p.organizationName}</td>
+                    <td className="px-4 py-3 text-foreground/75">{p.category}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        {p.opportunityId ? (
+                          <Link
+                            href={`/opportunities/${p.opportunityId}`}
+                            className="text-xs font-semibold text-brand-gold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 rounded-sm"
+                          >
+                            Preview
+                          </Link>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            approveOpportunitySubmission(p.id);
+                            alert("Listing approved — it now appears on the public opportunities page.");
+                          }}
+                          className="rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm("Reject this submission?")) {
+                              rejectOpportunitySubmission(p.id);
+                              alert("Listing rejected — visible to employer only.");
+                            }
+                          }}
+                          className="rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (
+                              confirm(
+                                "Delete this submission from the queue? This removes the draft opportunity.",
+                              )
+                            )
+                              deleteOpportunitySubmission(p.id);
+                          }}
+                          className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-800"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+        <h2 className="text-base font-bold text-brand-navy">
+          Employer-submitted listings (published / closed)
+        </h2>
+        <p className="mt-2 text-sm text-foreground/70">
+          Feature or close organization-submitted opportunities. Sample catalogue
+          listings are managed separately via the public opportunities page workflow.
+        </p>
+        {managedExtras.length === 0 ? (
+          <p className="mt-4 text-sm text-foreground/70">
+            No employer-submitted listings yet.
+          </p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[800px] text-left text-sm">
+              <thead className="border-b border-brand-border bg-brand-muted/60 text-xs uppercase text-foreground/55">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Title</th>
+                  <th className="px-4 py-3 font-semibold">Visibility</th>
+                  <th className="px-4 py-3 font-semibold">Featured</th>
+                  <th className="px-4 py-3 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {managedExtras.map((o) => (
+                  <tr key={o.id} className="border-b border-brand-border last:border-0">
+                    <td className="px-4 py-3 font-medium text-brand-navy">{o.title}</td>
+                    <td className="px-4 py-3 text-foreground/75">
+                      {o.visibility === "published" ? (
+                        <ListingStatusBadge status="Published" />
+                      ) : (
+                        <ListingStatusBadge status="Closed" />
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-foreground/75">
+                      {o.featured ? "Yes" : "No"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/opportunities/${o.id}`}
+                          className="text-xs font-semibold text-brand-gold underline"
+                        >
+                          Open
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => toggleOpportunityFeatured(o.id)}
+                          className="rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-navy"
+                        >
+                          Toggle featured
+                        </button>
+                        {o.visibility === "published" ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Close this listing for public search?")) {
+                                adminCloseOpportunity(o.id);
+                                alert("Listing closed.");
+                              }
+                            }}
+                            className="rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-navy"
+                          >
+                            Close listing
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="mt-8 grid gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+          <h2 className="text-base font-bold text-brand-navy">Manage users</h2>
+          <p className="mt-2 text-sm text-foreground/70">
+            Registrations captured in this demo: {registeredUsers.length}. Production
+            would sync to a secure directory with search and suspension tools.
+          </p>
+          <ul className="mt-4 max-h-48 space-y-2 overflow-y-auto text-sm text-foreground/80">
+            {registeredUsers.length === 0 ? (
+              <li className="text-foreground/55">No local registrations yet.</li>
+            ) : (
+              registeredUsers.map((u) => (
+                <li key={u.email} className="rounded-lg border border-brand-border px-3 py-2">
+                  <span className="font-medium text-brand-navy">{u.displayName}</span>{" "}
+                  <span className="text-foreground/55">({u.role})</span>
+                  <div className="text-xs text-foreground/50">{u.email}</div>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+        <div className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+          <h2 className="text-base font-bold text-brand-navy">Manage organizations</h2>
+          <p className="mt-2 text-sm text-foreground/70">
+            Verified and featured flags appear on the public directory.
+          </p>
+          <Link
+            href="/organizations"
+            className="mt-4 inline-flex text-sm font-semibold text-brand-gold underline decoration-brand-gold/50 underline-offset-2"
+          >
+            Open directory
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+        <h2 className="text-base font-bold text-brand-navy">Manage categories</h2>
+        <p className="mt-2 text-sm text-foreground/70">
+          Categories drive filters across the public site. Production would persist edits
+          to the database.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {CATEGORY_PRESETS.map((c) => (
+            <span
+              key={c}
+              className="rounded-full border border-brand-border bg-brand-muted/50 px-3 py-1 text-xs font-semibold text-brand-navy"
+            >
+              {c}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+        <h2 className="text-base font-bold text-brand-navy">Audit log (Neon)</h2>
+        <p className="mt-2 text-sm text-foreground/70">
+          Recent admin actions stored in{" "}
+          <code className="rounded bg-brand-muted px-1 py-0.5 text-xs">AdminActionLog</code>.
+        </p>
+        {auditLoading ? (
+          <p className="mt-4 text-sm text-foreground/60">Loading…</p>
+        ) : auditMessage ? (
+          <p className="mt-4 text-sm text-foreground/70">{auditMessage}</p>
+        ) : auditRows.length === 0 ? (
+          <p className="mt-4 text-sm text-foreground/60">No audit entries yet.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[520px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-brand-border text-xs font-semibold uppercase tracking-wide text-brand-gold">
+                  <th className="py-2 pr-3">Time</th>
+                  <th className="py-2 pr-3">Action</th>
+                  <th className="py-2">Actor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditRows.map((row) => (
+                  <tr key={row.id} className="border-b border-brand-border/70">
+                    <td className="py-2 pr-3 text-foreground/75">
+                      {new Date(row.createdAt).toLocaleString()}
+                    </td>
+                    <td className="py-2 pr-3 font-medium text-brand-navy">{row.action}</td>
+                    <td className="py-2 text-foreground/70">
+                      {row.actorUser?.email ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="mt-8 rounded-2xl border border-brand-border bg-brand-muted/40 p-6">
+        <h2 className="text-base font-bold text-brand-navy">Reports export</h2>
+        <p className="mt-2 text-sm text-foreground/70">
+          Export CSV summaries of listings, applications, and employer activity for
+          leadership dashboards.
+        </p>
+        <button
+          type="button"
+          className="mt-4 rounded-xl border border-brand-border bg-white px-5 py-2.5 text-sm font-semibold text-brand-navy hover:bg-brand-muted"
+          onClick={() =>
+            alert("Demo only: wire this button to a secure export endpoint.")
+          }
+        >
+          Download sample report
+        </button>
+      </section>
+    </PageShell>
+  );
+}

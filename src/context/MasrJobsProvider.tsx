@@ -1,0 +1,1099 @@
+"use client";
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { signOut, useSession } from "next-auth/react";
+import {
+  SAMPLE_OPPORTUNITIES,
+  SAMPLE_ORGANIZATIONS,
+  SAMPLE_PENDING_OPPORTUNITIES,
+  SAMPLE_PENDING_ORGS,
+} from "@/lib/sample-data";
+import { buildOpportunityFromSubmission } from "@/lib/build-submitted-opportunity";
+import { resolveOpportunity } from "@/lib/resolve-opportunity";
+import {
+  isApplicationOpenForOpportunity,
+  isPublishedCatalogOpportunity,
+} from "@/lib/opportunity-visibility";
+import { getOpportunityApplicationMethod } from "@/lib/opportunity-apply";
+import { isDemoAuthEnabled } from "@/lib/demo-auth";
+import { sessionUserFromNextAuth } from "@/lib/session-bridge";
+import type {
+  ApplicantProfile,
+  ApplicationRecord,
+  ApplicationStatus,
+  ExternalApplyIntentRecord,
+  InternalApplyPayload,
+  ListingStatus,
+  MasrJobsNotification,
+  Opportunity,
+  OrgListingRecord,
+  OrgOpportunitySubmissionInput,
+  PendingOppApproval,
+  PendingOrgRecord,
+  RegisteredUserSnapshot,
+  SessionUser,
+} from "@/lib/types";
+
+const STORAGE = {
+  session: "masrjobs:v1:session",
+  saved: "masrjobs:v1:saved",
+  applications: "masrjobs:v1:applications",
+  orgListings: "masrjobs:v1:orgListings",
+  pendingOrgs: "masrjobs:v1:pendingOrgs",
+  pendingOpps: "masrjobs:v1:pendingOpps",
+  extraOpps: "masrjobs:v1:extraOpportunities",
+  notifications: "masrjobs:v1:notifications",
+  approvedOrgEmails: "masrjobs:v1:approvedOrgEmails",
+  registeredUsers: "masrjobs:v1:registeredUsers",
+  applicantProfiles: "masrjobs:v1:applicantProfiles",
+  suppressedCatalogIds: "masrjobs:v1:suppressedCatalogIds",
+  externalApplyIntents: "masrjobs:v1:externalApplyIntents",
+} as const;
+
+const VERIFIED_ORG_IDS = new Set(
+  SAMPLE_ORGANIZATIONS.filter((o) => o.verified).map((o) => o.id),
+);
+
+function normEmail(e: string) {
+  return e.trim().toLowerCase();
+}
+
+function loadJson<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function buildInitialOrgListings(): OrgListingRecord[] {
+  return SAMPLE_OPPORTUNITIES.slice(0, 4).map((o, i) => ({
+    id: `ol-${o.id}`,
+    opportunityId: o.id,
+    title: o.title,
+    category: o.category,
+    status: (["Published", "Published", "Draft", "Closed"] as const)[
+      i % 4
+    ] as ListingStatus,
+    submittedAt: "2026-05-01",
+    applicantCount: [3, 12, 0, 8][i % 4] ?? 0,
+    submittedByOrgId: o.organizationId,
+  }));
+}
+
+function notificationVisibleForSession(
+  n: MasrJobsNotification,
+  session: SessionUser | null,
+): boolean {
+  if (n.audience.kind === "admin") return session?.role === "admin";
+  if (n.audience.kind === "org")
+    return (
+      session?.role === "organization" &&
+      normEmail(session.email) === normEmail(n.audience.email)
+    );
+  return (
+    session?.role === "individual" &&
+    normEmail(session.email) === normEmail(n.audience.email)
+  );
+}
+
+type MasrJobsContextValue = {
+  session: SessionUser | null;
+  login: (user: SessionUser) => void;
+  logout: () => void;
+  hydrated: boolean;
+
+  opportunities: Opportunity[];
+  getOpportunityById: (id: string) => Opportunity | undefined;
+  savedIds: Set<string>;
+  toggleSave: (opportunityId: string) => void;
+  isSaved: (opportunityId: string) => boolean;
+
+  applications: ApplicationRecord[];
+  applyToOpportunity: (
+    opportunityId: string,
+    payload: InternalApplyPayload,
+  ) => Promise<{ ok: boolean; message: string }>;
+  recordExternalApplyIntent: (
+    opportunityId: string,
+    channel: "email" | "external_link",
+  ) => Promise<{ ok: boolean; message: string }>;
+  externalApplyIntents: ExternalApplyIntentRecord[];
+  submitOrgOpportunity: (input: OrgOpportunitySubmissionInput) => void;
+  organizationCanPost: boolean;
+  orgListings: OrgListingRecord[];
+
+  pendingOrganizations: PendingOrgRecord[];
+  approveOrganization: (id: string) => void;
+  rejectOrganization: (id: string) => void;
+  registerPendingOrganization: (record: PendingOrgRecord) => void;
+  registerUserProfile: (record: RegisteredUserSnapshot) => void;
+  registeredUsers: RegisteredUserSnapshot[];
+
+  pendingOpportunityApprovals: PendingOppApproval[];
+  approveOpportunitySubmission: (id: string) => void;
+  rejectOpportunitySubmission: (id: string) => void;
+  deleteOpportunitySubmission: (id: string) => void;
+  adminCloseOpportunity: (opportunityId: string) => void;
+  toggleOpportunityFeatured: (opportunityId: string) => void;
+
+  updateApplicationStatus: (
+    applicationId: string,
+    status: ApplicationStatus,
+  ) => void;
+  closeOwnPublishedListing: (opportunityId: string) => void;
+
+  notifications: MasrJobsNotification[];
+  unreadNotificationCount: number;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
+
+  applicantProfile: ApplicantProfile | null;
+  setApplicantProfile: (profile: ApplicantProfile) => void;
+
+  /** Sample opportunity IDs removed from public browse after close (demo). */
+  suppressedCatalogIds: readonly string[];
+
+  /** Organization-submitted opportunities (all visibilities) for admin / detail resolve. */
+  orgSubmittedOpportunities: Opportunity[];
+};
+
+const MasrJobsContext = createContext<MasrJobsContextValue | null>(null);
+
+export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
+  const nextAuth = useSession();
+  const [localStorageReady, setLocalStorageReady] = useState(false);
+  const [demoSession, setDemoSession] = useState<SessionUser | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
+  const [orgListings, setOrgListings] = useState<OrgListingRecord[]>(
+    buildInitialOrgListings,
+  );
+  const [pendingOrganizations, setPendingOrganizations] = useState<
+    PendingOrgRecord[]
+  >(() => [...SAMPLE_PENDING_ORGS]);
+  const [pendingOpportunityApprovals, setPendingOpportunityApprovals] =
+    useState<PendingOppApproval[]>(() => [...SAMPLE_PENDING_OPPORTUNITIES]);
+  const [extraOpportunities, setExtraOpportunities] = useState<Opportunity[]>(
+    [],
+  );
+  const [notifications, setNotifications] = useState<MasrJobsNotification[]>(
+    [],
+  );
+  const [approvedOrgEmails, setApprovedOrgEmails] = useState<string[]>([]);
+  const [registeredUsers, setRegisteredUsers] = useState<
+    RegisteredUserSnapshot[]
+  >([]);
+  const [applicantProfile, setApplicantProfileState] =
+    useState<ApplicantProfile | null>(null);
+  const [suppressedCatalogIds, setSuppressedCatalogIds] = useState<string[]>(
+    [],
+  );
+  const [externalApplyIntents, setExternalApplyIntents] = useState<
+    ExternalApplyIntentRecord[]
+  >([]);
+
+  const pushNotification = useCallback((n: Omit<MasrJobsNotification, "id">) => {
+    const full: MasrJobsNotification = {
+      ...n,
+      id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    };
+    setNotifications((prev) => [full, ...prev].slice(0, 200));
+  }, []);
+
+  const session = useMemo((): SessionUser | null => {
+    if (isDemoAuthEnabled()) return demoSession;
+    if (nextAuth.status === "loading") return null;
+    return sessionUserFromNextAuth(nextAuth.data);
+  }, [demoSession, nextAuth.status, nextAuth.data]);
+
+  const hydrated = useMemo(() => {
+    if (!localStorageReady) return false;
+    if (isDemoAuthEnabled()) return true;
+    return nextAuth.status !== "loading";
+  }, [localStorageReady, nextAuth.status]);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- single-pass browser restore */
+  useEffect(() => {
+    const demo = isDemoAuthEnabled();
+    if (demo) {
+      setDemoSession(loadJson<SessionUser | null>(STORAGE.session, null));
+    }
+    const savedArr = loadJson<string[]>(STORAGE.saved, []);
+    setSavedIds(new Set(savedArr));
+    const rawExtra = loadJson<Opportunity[]>(STORAGE.extraOpps, []);
+    setExtraOpportunities(rawExtra);
+    const rawApps = loadJson<ApplicationRecord[]>(STORAGE.applications, []);
+    setApplications(
+      rawApps.map((a) => {
+        if (a.organizationId) return a;
+        const opp = resolveOpportunity(a.opportunityId, rawExtra);
+        return {
+          ...a,
+          organizationId: opp?.organizationId ?? "",
+        };
+      }),
+    );
+    const storedListings = loadJson<OrgListingRecord[] | null>(
+      STORAGE.orgListings,
+      null,
+    );
+    if (storedListings?.length) setOrgListings(storedListings);
+    const pOrgs = loadJson<PendingOrgRecord[] | null>(
+      STORAGE.pendingOrgs,
+      null,
+    );
+    if (pOrgs) setPendingOrganizations(pOrgs);
+    const pOpps = loadJson<PendingOppApproval[] | null>(
+      STORAGE.pendingOpps,
+      null,
+    );
+    if (pOpps) setPendingOpportunityApprovals(pOpps);
+    setSuppressedCatalogIds(
+      loadJson<string[]>(STORAGE.suppressedCatalogIds, []),
+    );
+    setNotifications(loadJson<MasrJobsNotification[]>(STORAGE.notifications, []));
+    setApprovedOrgEmails(
+      loadJson<string[]>(STORAGE.approvedOrgEmails, []).map(normEmail),
+    );
+    setRegisteredUsers(
+      loadJson<RegisteredUserSnapshot[]>(STORAGE.registeredUsers, []),
+    );
+    setExternalApplyIntents(
+      loadJson<ExternalApplyIntentRecord[]>(STORAGE.externalApplyIntents, []),
+    );
+    setLocalStorageReady(true);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  /* Restore applicant CV profile when session email is known. */
+  /* eslint-disable react-hooks/set-state-in-effect -- single read from localStorage */
+  useEffect(() => {
+    if (!hydrated || !session?.email) return;
+    const map = loadJson<Record<string, ApplicantProfile>>(
+      STORAGE.applicantProfiles,
+      {},
+    );
+    const raw = map[normEmail(session.email)] as Partial<ApplicantProfile> | undefined;
+    if (!raw) {
+      setApplicantProfileState(null);
+      return;
+    }
+    setApplicantProfileState({
+      fullName: (raw.fullName ?? session.displayName ?? "").trim() || session.displayName,
+      email: (raw.email ?? session.email).trim(),
+      phone: (raw.phone ?? "").trim(),
+      cvUrl: (raw.cvUrl ?? "").trim(),
+      linkedinUrl: raw.linkedinUrl?.trim() || undefined,
+      portfolioUrl: raw.portfolioUrl?.trim() || undefined,
+    });
+  }, [session?.email, session?.displayName, hydrated]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    if (!hydrated || !isDemoAuthEnabled()) return;
+    if (demoSession)
+      localStorage.setItem(STORAGE.session, JSON.stringify(demoSession));
+    else localStorage.removeItem(STORAGE.session);
+  }, [demoSession, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE.saved, JSON.stringify([...savedIds]));
+  }, [savedIds, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE.applications, JSON.stringify(applications));
+  }, [applications, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE.orgListings, JSON.stringify(orgListings));
+  }, [orgListings, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(
+      STORAGE.pendingOrgs,
+      JSON.stringify(pendingOrganizations),
+    );
+  }, [pendingOrganizations, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(
+      STORAGE.pendingOpps,
+      JSON.stringify(pendingOpportunityApprovals),
+    );
+  }, [pendingOpportunityApprovals, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(
+      STORAGE.extraOpps,
+      JSON.stringify(extraOpportunities),
+    );
+  }, [extraOpportunities, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(
+      STORAGE.notifications,
+      JSON.stringify(notifications),
+    );
+  }, [notifications, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(
+      STORAGE.approvedOrgEmails,
+      JSON.stringify(approvedOrgEmails),
+    );
+  }, [approvedOrgEmails, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(
+      STORAGE.registeredUsers,
+      JSON.stringify(registeredUsers),
+    );
+  }, [registeredUsers, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(
+      STORAGE.externalApplyIntents,
+      JSON.stringify(externalApplyIntents),
+    );
+  }, [externalApplyIntents, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(
+      STORAGE.suppressedCatalogIds,
+      JSON.stringify(suppressedCatalogIds),
+    );
+  }, [suppressedCatalogIds, hydrated]);
+
+  const organizationCanPost = useMemo(() => {
+    if (!session || session.role !== "organization") return false;
+    const id = session.organizationId;
+    if (id && VERIFIED_ORG_IDS.has(id)) return true;
+    return approvedOrgEmails.includes(normEmail(session.email));
+  }, [session, approvedOrgEmails]);
+
+  const visibleNotifications = useMemo(() => {
+    return notifications.filter((n) => notificationVisibleForSession(n, session));
+  }, [notifications, session]);
+
+  const unreadNotificationCount = useMemo(
+    () => visibleNotifications.filter((n) => !n.read).length,
+    [visibleNotifications],
+  );
+
+  const login = useCallback((user: SessionUser) => {
+    setDemoSession(user);
+  }, []);
+
+  const logout = useCallback(() => {
+    setDemoSession(null);
+    setApplicantProfileState(null);
+    if (!isDemoAuthEnabled()) {
+      void signOut({ redirect: false });
+    }
+  }, []);
+
+  const setApplicantProfile = useCallback(
+    (profile: ApplicantProfile) => {
+      if (!session?.email) return;
+      const key = normEmail(session.email);
+      const map = loadJson<Record<string, ApplicantProfile>>(
+        STORAGE.applicantProfiles,
+        {},
+      );
+      map[key] = profile;
+      localStorage.setItem(STORAGE.applicantProfiles, JSON.stringify(map));
+      setApplicantProfileState(profile);
+    },
+    [session],
+  );
+
+  const registerPendingOrganization = useCallback(
+    (record: PendingOrgRecord) => {
+      setPendingOrganizations((prev) => {
+        if (prev.some((p) => normEmail(p.email) === normEmail(record.email)))
+          return prev;
+        return [record, ...prev];
+      });
+      pushNotification({
+        createdAt: new Date().toISOString(),
+        read: false,
+        audience: { kind: "admin" },
+        title: "Organization registration",
+        message: `${record.name} (${record.email}) is awaiting account approval.`,
+      });
+    },
+    [pushNotification],
+  );
+
+  const registerUserProfile = useCallback((record: RegisteredUserSnapshot) => {
+    setRegisteredUsers((prev) => {
+      const next = prev.filter(
+        (u) => normEmail(u.email) !== normEmail(record.email),
+      );
+      return [record, ...next];
+    });
+  }, []);
+
+  const markNotificationRead = useCallback((id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+    );
+  }, []);
+
+  const markAllNotificationsRead = useCallback(() => {
+    if (!session) return;
+    setNotifications((prev) =>
+      prev.map((n) =>
+        notificationVisibleForSession(n, session) ? { ...n, read: true } : n,
+      ),
+    );
+  }, [session]);
+
+  const toggleSave = useCallback((opportunityId: string) => {
+    setSavedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(opportunityId)) next.delete(opportunityId);
+      else next.add(opportunityId);
+      return next;
+    });
+  }, []);
+
+  const isSaved = useCallback(
+    (opportunityId: string) => savedIds.has(opportunityId),
+    [savedIds],
+  );
+
+  const publishedOpportunities = useMemo(() => {
+    const suppressed = new Set(suppressedCatalogIds);
+    return [
+      ...SAMPLE_OPPORTUNITIES.filter(
+        (o) => isPublishedCatalogOpportunity(o) && !suppressed.has(o.id),
+      ),
+      ...extraOpportunities.filter(isPublishedCatalogOpportunity),
+    ];
+  }, [extraOpportunities, suppressedCatalogIds]);
+
+  const getOpportunityById = useCallback(
+    (id: string) => resolveOpportunity(id, extraOpportunities),
+    [extraOpportunities],
+  );
+
+  const applyToOpportunity = useCallback(
+    async (opportunityId: string, payload: InternalApplyPayload) => {
+      const opp = resolveOpportunity(opportunityId, extraOpportunities);
+      if (!opp) return { ok: false, message: "Opportunity not found." };
+      if (getOpportunityApplicationMethod(opp) !== "internal") {
+        return {
+          ok: false,
+          message: "This listing does not accept applications through MasrJobs.org.",
+        };
+      }
+      if (suppressedCatalogIds.includes(opportunityId)) {
+        return {
+          ok: false,
+          message:
+            "This listing has been closed and is no longer accepting applications.",
+        };
+      }
+      if (!isApplicationOpenForOpportunity(opp)) {
+        return {
+          ok: false,
+          message:
+            "This listing is not open for applications (pending approval, closed, or unpublished).",
+        };
+      }
+      if (!session || session.role !== "individual") {
+        return {
+          ok: false,
+          message: "Please sign in as an individual applicant to apply.",
+        };
+      }
+      if (!applicantProfile) {
+        return {
+          ok: false,
+          message: "Complete your applicant profile (name, phone, CV) before applying.",
+        };
+      }
+      const phoneOk = applicantProfile.phone?.trim();
+      if (!phoneOk) {
+        return {
+          ok: false,
+          message: "Add your phone number in your applicant profile before applying.",
+        };
+      }
+      const cvOk = applicantProfile.cvUrl?.trim();
+      if (!cvOk || !cvOk.startsWith("http")) {
+        return {
+          ok: false,
+          message: "Add a valid CV or resume URL (https) in your applicant profile before applying.",
+        };
+      }
+      const applicantPhone = applicantProfile.phone.trim();
+      const cvUrl = applicantProfile.cvUrl.trim();
+      const me = normEmail(session.email);
+      const already = applications.some((a) => {
+        if (a.opportunityId !== opportunityId) return false;
+        if (!a.applicantEmail) return false;
+        return normEmail(a.applicantEmail) === me;
+      });
+      if (already) {
+        return { ok: false, message: "You have already applied to this role." };
+      }
+
+      let serverId: string | undefined;
+      try {
+        const res = await fetch("/api/applications/internal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            listingId: opportunityId,
+            organizationId: opp.organizationId,
+            opportunityTitle: opp.title,
+            applicantEmail: session.email,
+            applicantFullName: payload.fullName.trim(),
+            applicantPhone,
+            cvUrl,
+            linkedinUrl: applicantProfile.linkedinUrl?.trim() || undefined,
+            portfolioUrl: payload.portfolioUrl?.trim() || undefined,
+            coverLetter: payload.coverLetter?.trim() || undefined,
+          }),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { id?: string };
+          serverId = data.id;
+        }
+      } catch {
+        /* Neon optional — local demo still works */
+      }
+
+      const rec: ApplicationRecord = {
+        id: `app-${Date.now()}`,
+        opportunityId,
+        opportunityTitle: opp.title,
+        organizationName: opp.organizationName,
+        organizationId: opp.organizationId,
+        status: "Submitted",
+        submittedAt: new Date().toISOString().slice(0, 10),
+        coverLetter: payload.coverLetter?.trim() || undefined,
+        applicantEmail: session.email,
+        applicantDisplayName: session.displayName,
+        applicantFullName: payload.fullName.trim(),
+        applicantPhone,
+        cvUrl,
+        linkedinUrl: applicantProfile.linkedinUrl?.trim() || undefined,
+        portfolioUrl: payload.portfolioUrl?.trim() || undefined,
+        serverId,
+        channel: "internal",
+      };
+      setApplications((prev) => [...prev, rec]);
+      setOrgListings((prev) =>
+        prev.map((row) =>
+          row.opportunityId === opportunityId
+            ? { ...row, applicantCount: row.applicantCount + 1 }
+            : row,
+        ),
+      );
+      const orgEmail = opp.contactEmail?.trim();
+      if (orgEmail) {
+        pushNotification({
+          createdAt: new Date().toISOString(),
+          read: false,
+          audience: { kind: "org", email: normEmail(orgEmail) },
+          title: "New application",
+          message: `Someone applied to “${opp.title}” via MasrJobs.org.`,
+        });
+      }
+      return {
+        ok: true,
+        message: serverId
+          ? "Application submitted and saved to the database."
+          : "Application submitted successfully.",
+      };
+    },
+    [
+      session,
+      applications,
+      extraOpportunities,
+      applicantProfile,
+      pushNotification,
+      suppressedCatalogIds,
+    ],
+  );
+
+  const recordExternalApplyIntent = useCallback(
+    async (opportunityId: string, channel: "email" | "external_link") => {
+      const opp = resolveOpportunity(opportunityId, extraOpportunities);
+      if (!opp) return { ok: false, message: "Opportunity not found." };
+      if (!session || session.role !== "individual") {
+        return {
+          ok: false,
+          message: "Please sign in as an individual to track external applications.",
+        };
+      }
+      const me = normEmail(session.email);
+      const exists = externalApplyIntents.some(
+        (x) =>
+          x.opportunityId === opportunityId &&
+          normEmail(x.applicantEmail) === me &&
+          x.channel === channel,
+      );
+      if (exists) {
+        return {
+          ok: false,
+          message: "You have already recorded this action for this listing.",
+        };
+      }
+      try {
+        await fetch("/api/applications/external-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            listingId: opportunityId,
+            applicantEmail: session.email,
+            channel: channel === "email" ? "EMAIL" : "EXTERNAL_LINK",
+          }),
+        });
+      } catch {
+        /* optional Neon */
+      }
+      const row: ExternalApplyIntentRecord = {
+        id: `ext-${Date.now()}`,
+        opportunityId,
+        opportunityTitle: opp.title,
+        organizationName: opp.organizationName,
+        applicantEmail: session.email,
+        channel,
+        recordedAt: new Date().toISOString().slice(0, 10),
+      };
+      setExternalApplyIntents((prev) => [row, ...prev]);
+      setOrgListings((prev) =>
+        prev.map((r) =>
+          r.opportunityId === opportunityId
+            ? { ...r, applicantCount: r.applicantCount + 1 }
+            : r,
+        ),
+      );
+      return { ok: true, message: "Recorded — see your applicant dashboard." };
+    },
+    [session, externalApplyIntents, extraOpportunities],
+  );
+
+  const submitOrgOpportunity = useCallback(
+    (input: OrgOpportunitySubmissionInput) => {
+      if (!session || session.role !== "organization") return;
+      if (!organizationCanPost) return;
+      const oppId = `opp-${Date.now()}`;
+      const queueId = `popp-q-${Date.now()}`;
+      const built = buildOpportunityFromSubmission(session, input, oppId);
+      const today = new Date().toISOString().slice(0, 10);
+
+      setExtraOpportunities((prev) => [...prev, built]);
+      setPendingOpportunityApprovals((prev) => [
+        {
+          id: queueId,
+          opportunityId: oppId,
+          title: built.title,
+          organizationName: built.organizationName,
+          category: built.category,
+          submittedAt: today,
+        },
+        ...prev,
+      ]);
+      setOrgListings((prev) => [
+        {
+          id: `ol-${oppId}`,
+          opportunityId: oppId,
+          title: built.title,
+          category: built.category,
+          status: "Pending approval",
+          submittedAt: today,
+          applicantCount: 0,
+          submittedByOrgId: session.organizationId ?? undefined,
+        },
+        ...prev,
+      ]);
+      pushNotification({
+        createdAt: new Date().toISOString(),
+        read: false,
+        audience: { kind: "admin" },
+        title: "Listing pending approval",
+        message: `${built.organizationName} submitted “${built.title}”.`,
+      });
+    },
+    [session, organizationCanPost, pushNotification],
+  );
+
+  const approveOrganization = useCallback(
+    (id: string) => {
+      setPendingOrganizations((prev) => {
+        const row = prev.find((p) => p.id === id);
+        if (!row) return prev;
+        setApprovedOrgEmails((emails) =>
+          emails.includes(normEmail(row.email))
+            ? emails
+            : [...emails, normEmail(row.email)],
+        );
+        pushNotification({
+          createdAt: new Date().toISOString(),
+          read: false,
+          audience: { kind: "org", email: normEmail(row.email) },
+          title: "Account approved",
+          message:
+            "Your organization can now post opportunities on MasrJobs.org (demo: stored in this browser).",
+        });
+        return prev.filter((p) => p.id !== id);
+      });
+    },
+    [pushNotification],
+  );
+
+  const rejectOrganization = useCallback(
+    (id: string) => {
+      setPendingOrganizations((prev) => {
+        const row = prev.find((p) => p.id === id);
+        if (!row) return prev;
+        pushNotification({
+          createdAt: new Date().toISOString(),
+          read: false,
+          audience: { kind: "org", email: normEmail(row.email) },
+          title: "Account not approved",
+          message:
+            "Your organization registration was not approved in this demo workflow.",
+        });
+        return prev.filter((p) => p.id !== id);
+      });
+    },
+    [pushNotification],
+  );
+
+  const approveOpportunitySubmission = useCallback(
+    (id: string) => {
+      setPendingOpportunityApprovals((prev) => {
+        const item = prev.find((p) => p.id === id);
+        if (!item) return prev;
+
+        if (item.opportunityId) {
+          setExtraOpportunities((extras) => {
+            const next = extras.map((o) =>
+              o.id === item.opportunityId
+                ? { ...o, visibility: "published" as const }
+                : o,
+            );
+            const pub = next.find((o) => o.id === item.opportunityId);
+            const em = pub?.contactEmail?.trim();
+            if (em) {
+              queueMicrotask(() =>
+                pushNotification({
+                  createdAt: new Date().toISOString(),
+                  read: false,
+                  audience: { kind: "org", email: normEmail(em) },
+                  title: "Listing published",
+                  message: `“${item.title}” is now live on the public opportunities page.`,
+                }),
+              );
+            }
+            return next;
+          });
+          setOrgListings((listings) =>
+            listings.map((l) =>
+              l.opportunityId === item.opportunityId &&
+              l.status === "Pending approval"
+                ? { ...l, status: "Published" as ListingStatus }
+                : l,
+            ),
+          );
+        } else {
+          setOrgListings((listings) =>
+            listings.map((l) =>
+              l.title === item.title && l.status === "Pending approval"
+                ? { ...l, status: "Published" as ListingStatus }
+                : l,
+            ),
+          );
+        }
+        return prev.filter((p) => p.id !== id);
+      });
+    },
+    [pushNotification],
+  );
+
+  const rejectOpportunitySubmission = useCallback(
+    (id: string) => {
+      setPendingOpportunityApprovals((prev) => {
+        const row = prev.find((p) => p.id === id);
+        if (!row) return prev;
+
+        if (row.opportunityId) {
+          setExtraOpportunities((extras) => {
+            const next = extras.map((o) =>
+              o.id === row.opportunityId
+                ? { ...o, visibility: "rejected" as const }
+                : o,
+            );
+            const rej = next.find((o) => o.id === row.opportunityId);
+            const em = rej?.contactEmail?.trim();
+            if (em) {
+              queueMicrotask(() =>
+                pushNotification({
+                  createdAt: new Date().toISOString(),
+                  read: false,
+                  audience: { kind: "org", email: normEmail(em) },
+                  title: "Listing not approved",
+                  message: `“${row.title}” was not approved for public listing.`,
+                }),
+              );
+            }
+            return next;
+          });
+          setOrgListings((listings) =>
+            listings.map((l) =>
+              l.opportunityId === row.opportunityId
+                ? { ...l, status: "Rejected" as ListingStatus }
+                : l,
+            ),
+          );
+        } else {
+          setOrgListings((listings) =>
+            listings.map((l) =>
+              l.title === row.title && l.status === "Pending approval"
+                ? { ...l, status: "Rejected" as ListingStatus }
+                : l,
+            ),
+          );
+        }
+        return prev.filter((p) => p.id !== id);
+      });
+    },
+    [pushNotification],
+  );
+
+  const deleteOpportunitySubmission = useCallback(
+    (id: string) => {
+      setPendingOpportunityApprovals((prev) => {
+        const row = prev.find((p) => p.id === id);
+        if (!row) return prev;
+        if (row.opportunityId) {
+          setExtraOpportunities((extras) =>
+            extras.filter((o) => o.id !== row.opportunityId),
+          );
+          setOrgListings((listings) =>
+            listings.filter((l) => l.opportunityId !== row.opportunityId),
+          );
+        }
+        return prev.filter((p) => p.id !== id);
+      });
+    },
+    [],
+  );
+
+  const adminCloseOpportunity = useCallback((opportunityId: string) => {
+    const inSample = SAMPLE_OPPORTUNITIES.some((o) => o.id === opportunityId);
+    if (inSample) {
+      setSuppressedCatalogIds((prev) =>
+        prev.includes(opportunityId) ? prev : [...prev, opportunityId],
+      );
+    } else {
+      setExtraOpportunities((extras) =>
+        extras.map((o) =>
+          o.id === opportunityId ? { ...o, visibility: "closed" as const } : o,
+        ),
+      );
+    }
+    setOrgListings((listings) =>
+      listings.map((l) =>
+        l.opportunityId === opportunityId
+          ? { ...l, status: "Closed" as ListingStatus }
+          : l,
+      ),
+    );
+  }, []);
+
+  const toggleOpportunityFeatured = useCallback((opportunityId: string) => {
+    setExtraOpportunities((extras) =>
+      extras.map((o) =>
+        o.id === opportunityId ? { ...o, featured: !o.featured } : o,
+      ),
+    );
+  }, []);
+
+  const updateApplicationStatus = useCallback(
+    (applicationId: string, status: ApplicationStatus) => {
+      if (!session || session.role !== "organization") return;
+      setApplications((prev) => {
+        const target = prev.find((a) => a.id === applicationId);
+        if (!target) return prev;
+        if (target.organizationId !== session.organizationId) return prev;
+        const next = prev.map((a) =>
+          a.id === applicationId ? { ...a, status } : a,
+        );
+        const em = target.applicantEmail?.trim();
+        if (em) {
+          queueMicrotask(() =>
+            pushNotification({
+              createdAt: new Date().toISOString(),
+              read: false,
+              audience: { kind: "user", email: normEmail(em) },
+              title: "Application status updated",
+              message: `Your application to “${target.opportunityTitle}” is now: ${status}.`,
+            }),
+          );
+        }
+        return next;
+      });
+    },
+    [session, pushNotification],
+  );
+
+  const closeOwnPublishedListing = useCallback(
+    (opportunityId: string) => {
+      if (!session || session.role !== "organization") return;
+      const inSample = SAMPLE_OPPORTUNITIES.some((o) => o.id === opportunityId);
+      setOrgListings((listings) => {
+        const row = listings.find(
+          (l) =>
+            l.opportunityId === opportunityId &&
+            l.submittedByOrgId === session.organizationId,
+        );
+        if (!row || row.status !== "Published") return listings;
+        return listings.map((l) =>
+          l.opportunityId === opportunityId &&
+          l.submittedByOrgId === session.organizationId
+            ? { ...l, status: "Closed" as ListingStatus }
+            : l,
+        );
+      });
+      if (inSample) {
+        setSuppressedCatalogIds((prev) =>
+          prev.includes(opportunityId) ? prev : [...prev, opportunityId],
+        );
+      } else {
+        setExtraOpportunities((extras) =>
+          extras.map((o) =>
+            o.id === opportunityId &&
+            o.organizationId === session.organizationId
+              ? { ...o, visibility: "closed" as const }
+              : o,
+          ),
+        );
+      }
+    },
+    [session],
+  );
+
+  const value = useMemo<MasrJobsContextValue>(
+    () => ({
+      session,
+      login,
+      logout,
+      hydrated,
+      opportunities: publishedOpportunities,
+      getOpportunityById,
+      savedIds,
+      toggleSave,
+      isSaved,
+      applications,
+      applyToOpportunity,
+      recordExternalApplyIntent,
+      externalApplyIntents,
+      orgListings,
+      submitOrgOpportunity,
+      organizationCanPost,
+      pendingOrganizations,
+      approveOrganization,
+      rejectOrganization,
+      registerPendingOrganization,
+      registerUserProfile,
+      registeredUsers,
+      pendingOpportunityApprovals,
+      approveOpportunitySubmission,
+      rejectOpportunitySubmission,
+      deleteOpportunitySubmission,
+      adminCloseOpportunity,
+      toggleOpportunityFeatured,
+      updateApplicationStatus,
+      closeOwnPublishedListing,
+      notifications: visibleNotifications,
+      unreadNotificationCount,
+      markNotificationRead,
+      markAllNotificationsRead,
+      applicantProfile,
+      setApplicantProfile,
+      suppressedCatalogIds,
+      orgSubmittedOpportunities: extraOpportunities,
+    }),
+    [
+      session,
+      login,
+      logout,
+      hydrated,
+      publishedOpportunities,
+      getOpportunityById,
+      savedIds,
+      toggleSave,
+      isSaved,
+      applications,
+      applyToOpportunity,
+      recordExternalApplyIntent,
+      externalApplyIntents,
+      orgListings,
+      submitOrgOpportunity,
+      organizationCanPost,
+      pendingOrganizations,
+      approveOrganization,
+      rejectOrganization,
+      registerPendingOrganization,
+      registerUserProfile,
+      registeredUsers,
+      pendingOpportunityApprovals,
+      approveOpportunitySubmission,
+      rejectOpportunitySubmission,
+      deleteOpportunitySubmission,
+      adminCloseOpportunity,
+      toggleOpportunityFeatured,
+      updateApplicationStatus,
+      closeOwnPublishedListing,
+      visibleNotifications,
+      unreadNotificationCount,
+      markNotificationRead,
+      markAllNotificationsRead,
+      applicantProfile,
+      setApplicantProfile,
+      suppressedCatalogIds,
+      extraOpportunities,
+    ],
+  );
+
+  return (
+    <MasrJobsContext.Provider value={value}>{children}</MasrJobsContext.Provider>
+  );
+}
+
+export function useMasrJobs() {
+  const ctx = useContext(MasrJobsContext);
+  if (!ctx) {
+    throw new Error("useMasrJobs must be used within MasrJobsProvider");
+  }
+  return ctx;
+}

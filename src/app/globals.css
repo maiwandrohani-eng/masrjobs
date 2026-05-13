@@ -1,8 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Logo-aligned MasrJobs palette (navy “JOBS” + gold “MASR”) */
+  --brand-navy: #1b365d;
+  --brand-navy-deep: #152a49;
+  --brand-gold: #c5a059;
+  --brand-gold-soft: #e8d9b4;
+  --brand-gold-muted: #f5efe3;
+
+  --background: #f8f7f4;
+  --foreground: #1b365d;
+
+  --brand-muted: #f0ebe2;
+  --brand-border: #e0d8ca;
+  --card: #ffffff;
 }
 
 @theme inline {
@@ -10,17 +21,24 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-navy-deep: var(--brand-navy-deep);
+  --color-brand-gold: var(--brand-gold);
+  --color-brand-gold-soft: var(--brand-gold-soft);
+  --color-brand-gold-muted: var(--brand-gold-muted);
+  --color-brand-muted: var(--brand-muted);
+  --color-brand-border: var(--brand-border);
+  --color-card: var(--card);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--brand-gold) 38%, transparent);
+  color: var(--brand-navy-deep);
 }
