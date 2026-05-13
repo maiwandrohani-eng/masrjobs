@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
+import { AdminSiteContactPanel } from "@/components/AdminSiteContactPanel";
 import { PageIntro, PageShell } from "@/components/PageShell";
 import { ListingStatusBadge } from "@/components/StatusBadge";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
@@ -448,6 +449,8 @@ export default function AdminDashboardPage() {
           ))}
         </div>
       </section>
+
+      <AdminSiteContactPanel disabled={previewAuth} />
 
       <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
         <h2 className="text-base font-bold text-brand-navy">Audit log (Neon)</h2>

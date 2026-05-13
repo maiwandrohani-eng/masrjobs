@@ -4,6 +4,7 @@ import "./globals.css";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Providers } from "@/components/Providers";
+import { getContactPublicData } from "@/lib/site-contact";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,11 +22,13 @@ export const metadata: Metadata = {
     "MasrJobs.org connects Egypt’s NGO, development, humanitarian, and social impact ecosystem with jobs, consultancies, trainings, volunteering, tenders, and grants.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const contact = await getContactPublicData();
+
   return (
     <html
       lang="en"
@@ -36,7 +39,7 @@ export default function RootLayout({
         <Providers>
           <SiteHeader />
           <div className="flex-1">{children}</div>
-          <SiteFooter />
+          <SiteFooter social={contact.social} />
         </Providers>
       </body>
     </html>

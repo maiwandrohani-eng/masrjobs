@@ -1,15 +1,14 @@
 import Link from "next/link";
+import { DEFAULT_SOCIAL_LINKS, type SocialLink } from "@/lib/site-contact-defaults";
 
-const social: { href: string; abbr: string; label: string }[] = [
-  { href: "https://facebook.com/masrjobs", abbr: "f", label: "Facebook" },
-  { href: "https://instagram.com/masrjobs", abbr: "◎", label: "Instagram" },
-  { href: "https://x.com/masrjobs", abbr: "𝕏", label: "X" },
-  { href: "https://linkedin.com/company/masrjobs", abbr: "in", label: "LinkedIn" },
-  { href: "https://tiktok.com/@masrjobs", abbr: "♪", label: "TikTok" },
-  { href: "https://youtube.com/@masrjobs", abbr: "▶", label: "YouTube" },
-];
+type SiteFooterProps = {
+  /** When set (e.g. from DB via layout), overrides default social icons. */
+  social?: SocialLink[];
+};
 
-export function SiteFooter() {
+export function SiteFooter({ social }: SiteFooterProps) {
+  const links = social?.length ? social : DEFAULT_SOCIAL_LINKS;
+
   return (
     <footer className="border-t border-brand-navy/20 bg-brand-navy text-white">
       <div className="mx-auto w-full max-w-6xl px-4 py-10">
@@ -22,17 +21,17 @@ export function SiteFooter() {
               Egypt’s Development & Social Impact Jobs Platform.
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
-              {social.map(({ href, abbr, label }) => (
+              {links.map((s) => (
                 <a
-                  key={href}
-                  href={href}
+                  key={`${s.href}-${s.label}`}
+                  href={s.href}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex h-9 min-w-9 items-center justify-center rounded-full border border-white/20 px-2 text-xs font-semibold text-white/90 transition-colors hover:border-brand-gold-soft hover:text-brand-gold-soft"
-                  aria-label={label}
-                  title={label}
+                  aria-label={s.label}
+                  title={s.label}
                 >
-                  {abbr}
+                  {s.abbr}
                 </a>
               ))}
             </div>

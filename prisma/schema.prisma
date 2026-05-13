@@ -341,3 +341,10 @@ model NewsletterSubscription {
 
   @@index([createdAt])
 }
+
+/** Key-value settings editable from admin (e.g. public contact card). */
+model SiteSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
