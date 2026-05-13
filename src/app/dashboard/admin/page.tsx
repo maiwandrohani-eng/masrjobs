@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { PageIntro, PageShell } from "@/components/PageShell";
 import { ListingStatusBadge } from "@/components/StatusBadge";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
+import { isDemoAuthEnabled } from "@/lib/demo-auth";
 import type { OpportunityCategory } from "@/lib/types";
 
 const CATEGORY_PRESETS: OpportunityCategory[] = [
@@ -476,6 +478,16 @@ export default function AdminDashboardPage() {
           Download sample report
         </button>
       </section>
+
+      {!isDemoAuthEnabled() ? (
+        <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+          <h2 className="text-base font-bold text-brand-navy">Account security</h2>
+          <p className="mt-1 text-sm text-foreground/70">
+            Change the password for your MasrJobs admin sign-in (Neon user account).
+          </p>
+          <ChangePasswordForm />
+        </section>
+      ) : null}
     </PageShell>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { PageIntro, PageShell } from "@/components/PageShell";
 import { OrgSubmitOpportunityForm } from "@/components/OrgSubmitOpportunityForm";
 import {
@@ -10,6 +11,7 @@ import {
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
 import { usePersistedViewMode } from "@/hooks/usePersistedViewMode";
+import { isDemoAuthEnabled } from "@/lib/demo-auth";
 import type { ApplicationStatus } from "@/lib/types";
 
 export default function OrganizationDashboardPage() {
@@ -108,6 +110,16 @@ export default function OrganizationDashboardPage() {
           </div>
         </dl>
       </section>
+
+      {!isDemoAuthEnabled() ? (
+        <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+          <h2 className="text-base font-bold text-brand-navy">Account security</h2>
+          <p className="mt-1 text-sm text-foreground/70">
+            Change the password for your organization sign-in (Neon user account).
+          </p>
+          <ChangePasswordForm />
+        </section>
+      ) : null}
 
       <div className="mt-8">
         <OrgSubmitOpportunityForm />

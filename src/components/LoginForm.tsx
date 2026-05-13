@@ -18,6 +18,7 @@ function inferRole(email: string): UserRole {
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const resetOk = searchParams.get("reset") === "1";
   const { login } = useMasrJobs();
   const demo = isDemoAuthEnabled();
   const [email, setEmail] = useState(demo ? "applicant@demo.org" : "");
@@ -79,6 +80,11 @@ export function LoginForm() {
       onSubmit={(e) => void onSubmit(e)}
       className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm md:p-8"
     >
+      {resetOk && !demo ? (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          Your password was updated. Sign in with your new password.
+        </p>
+      ) : null}
       {demo ? (
         <p className="text-sm text-foreground/70">
           Demo login: use an email containing <strong>admin</strong>,{" "}
@@ -112,6 +118,16 @@ export function LoginForm() {
       />
       {error ? (
         <p className="mt-3 text-sm font-medium text-red-700">{error}</p>
+      ) : null}
+      {!demo ? (
+        <p className="mt-2 text-right text-sm">
+          <Link
+            href="/forgot-password"
+            className="font-semibold text-brand-gold underline decoration-brand-gold/50 underline-offset-2"
+          >
+            Forgot password?
+          </Link>
+        </p>
       ) : null}
       <button
         type="submit"

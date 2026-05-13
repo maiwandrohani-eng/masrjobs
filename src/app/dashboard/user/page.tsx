@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { PageIntro, PageShell } from "@/components/PageShell";
 import { ApplicationStatusBadge } from "@/components/StatusBadge";
 import { OpportunityListRow } from "@/components/OpportunityListRow";
@@ -9,6 +10,7 @@ import { OpportunityCard } from "@/components/OpportunityCard";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
 import { usePersistedViewMode } from "@/hooks/usePersistedViewMode";
+import { isDemoAuthEnabled } from "@/lib/demo-auth";
 import { isPublishedCatalogOpportunity } from "@/lib/opportunity-visibility";
 import type { ApplicationStatus, Opportunity } from "@/lib/types";
 
@@ -228,6 +230,16 @@ export default function UserDashboardPage() {
           </button>
         </form>
       </section>
+
+      {!isDemoAuthEnabled() ? (
+        <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+          <h2 className="text-base font-bold text-brand-navy">Account security</h2>
+          <p className="mt-1 text-sm text-foreground/70">
+            Change the password you use to sign in to MasrJobs.org (stored in the database).
+          </p>
+          <ChangePasswordForm />
+        </section>
+      ) : null}
 
       <section className="mt-8">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
