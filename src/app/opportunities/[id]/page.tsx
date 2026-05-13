@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title: "Opportunity | MasrJobs.org",
       description:
-        "Jobs, consultancies, and impact roles for Egypt’s NGO and development sector on MasrJobs.org.",
+        "Jobs, consultancies, trainings, and impact roles across Egypt on MasrJobs.org.",
     };
   }
   const row = await loadOpportunityByRef(prisma, id);
@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title: "Opportunity | MasrJobs.org",
       description:
-        "Jobs, consultancies, and impact roles for Egypt’s NGO and development sector on MasrJobs.org.",
+        "Jobs, consultancies, trainings, and impact roles across Egypt on MasrJobs.org.",
     };
   }
   const o = mapOpportunityRecord(row);
@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `${o.title} | MasrJobs.org`;
   const description =
     o.shortDescription ??
-    "Jobs, consultancies, and impact roles for Egypt’s NGO and development sector on MasrJobs.org.";
+    "Jobs, consultancies, trainings, and impact roles across Egypt on MasrJobs.org.";
   const url = absoluteUrl(`/opportunities/${pathSeg}`);
   return {
     title,

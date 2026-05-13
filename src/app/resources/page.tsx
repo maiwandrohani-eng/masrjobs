@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { PageIntro, PageShell } from "@/components/PageShell";
 import { ResourcesArticles } from "@/components/ResourcesArticles";
+import { isDemoAuthEnabled } from "@/lib/demo-auth";
 import { resourceArticleSummaries } from "@/lib/resources-articles";
 
 const articles = resourceArticleSummaries();
 
 export default function ResourcesPage() {
+  const demo = isDemoAuthEnabled();
+
   return (
     <div className="min-h-[60vh] bg-background">
       <PageShell>
@@ -30,7 +33,7 @@ export default function ResourcesPage() {
               type="button"
               className="rounded-xl bg-brand-navy px-6 py-2.5 text-sm font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50"
             >
-              Join list (demo)
+              {demo ? "Join list (demo)" : "Join list"}
             </button>
           </div>
         </div>

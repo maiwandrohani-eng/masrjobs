@@ -1,5 +1,5 @@
 export type OpportunityCategory =
-  | "NGO Jobs"
+  | "Jobs"
   | "Consultancies"
   | "Trainings"
   | "Volunteer Roles"

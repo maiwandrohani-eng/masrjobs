@@ -78,8 +78,22 @@ export function sendOrganizationApprovedEmail(to: string, organizationName: stri
   queueTransactionalEmail("org-approved", async () => {
     const body = buildOrganizationApprovedEmail(organizationName);
     const r = await sendEmail({ to, ...body });
-    if (!r.ok) console.error("[email] org approved failed", r.error);
+    if (!r.ok) console.error("[email] org approved failed", to, r.error);
   });
+}
+
+/** Sends the same approval confirmation to each unique address (org contact + all active org users). */
+export function sendOrganizationApprovedEmailToAll(
+  recipients: string[],
+  organizationName: string,
+): void {
+  const seen = new Set<string>();
+  for (const raw of recipients) {
+    const e = raw.trim().toLowerCase();
+    if (!e.includes("@") || seen.has(e)) continue;
+    seen.add(e);
+    sendOrganizationApprovedEmail(raw.trim(), organizationName);
+  }
 }
 
 export function sendOrganizationRejectedEmail(to: string, organizationName: string): void {

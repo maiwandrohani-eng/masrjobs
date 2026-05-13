@@ -12,7 +12,7 @@ const LISTING_TYPES_BY_CATEGORY: Record<
   OpportunityCategory,
   readonly string[]
 > = {
-  "NGO Jobs": [
+  Jobs: [
     "Full-time",
     "Part-time",
     "Fixed-term contract",
@@ -68,6 +68,8 @@ function resolveMode(
       return "training";
     case "Consultancies":
       return "consultancy";
+    case "Jobs":
+      return "job";
     default:
       return "job";
   }

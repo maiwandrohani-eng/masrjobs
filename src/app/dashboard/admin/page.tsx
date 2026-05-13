@@ -10,7 +10,7 @@ import { isDemoAuthEnabled } from "@/lib/demo-auth";
 import type { OpportunityCategory } from "@/lib/types";
 
 const CATEGORY_PRESETS: OpportunityCategory[] = [
-  "NGO Jobs",
+  "Jobs",
   "Consultancies",
   "Trainings",
   "Volunteer Roles",

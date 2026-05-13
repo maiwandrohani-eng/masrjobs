@@ -214,6 +214,9 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
     ExternalApplyIntentRecord[]
   >([]);
 
+  /** Production: live DB check so employer UI is not stuck on stale catalog cache. */
+  const [orgPostingAllowed, setOrgPostingAllowed] = useState<boolean | null>(null);
+
   const [neonCatalog, setNeonCatalog] = useState<{
     opportunities: Opportunity[];
     organizations: Organization[];
@@ -277,6 +280,33 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
     if (nextAuth.status === "loading") return null;
     return sessionUserFromNextAuth(nextAuth.data);
   }, [demoSession, nextAuth.status, nextAuth.data]);
+
+  const refreshOrgPostingAllowed = useCallback(() => {
+    if (demoMode) return;
+    void fetch("/api/organization/posting-status", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: { canPost?: boolean }) => {
+        setOrgPostingAllowed(typeof d.canPost === "boolean" ? d.canPost : null);
+      })
+      .catch(() => {
+        setOrgPostingAllowed(null);
+      });
+  }, [demoMode]);
+
+  useEffect(() => {
+    if (demoMode || !session || session.role !== "organization") {
+      setOrgPostingAllowed(null);
+      return;
+    }
+    refreshOrgPostingAllowed();
+  }, [demoMode, session, refreshOrgPostingAllowed]);
+
+  useEffect(() => {
+    if (demoMode || session?.role !== "organization") return;
+    const onFocus = () => refreshOrgPostingAllowed();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [demoMode, session?.role, refreshOrgPostingAllowed]);
 
   const hydrated = useMemo(() => {
     if (!localStorageReady) return false;
@@ -476,10 +506,23 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
 
   const organizationCanPost = useMemo(() => {
     if (!session || session.role !== "organization") return false;
+    if (demoMode) {
+      const id = session.organizationId;
+      if (id && verifiedOrgIds.has(id)) return true;
+      return approvedOrgEmails.includes(normEmail(session.email));
+    }
+    if (orgPostingAllowed === true) return true;
+    if (orgPostingAllowed === false) return false;
     const id = session.organizationId;
     if (id && verifiedOrgIds.has(id)) return true;
     return approvedOrgEmails.includes(normEmail(session.email));
-  }, [session, approvedOrgEmails, verifiedOrgIds]);
+  }, [
+    session,
+    demoMode,
+    approvedOrgEmails,
+    verifiedOrgIds,
+    orgPostingAllowed,
+  ]);
 
   const visibleNotifications = useMemo(() => {
     return notifications.filter((n) => notificationVisibleForSession(n, session));

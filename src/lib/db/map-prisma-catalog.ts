@@ -19,7 +19,7 @@ import type {
 } from "@/generated/prisma/client";
 
 const CATEGORIES: readonly OpportunityCategory[] = [
-  "NGO Jobs",
+  "Jobs",
   "Consultancies",
   "Trainings",
   "Volunteer Roles",
@@ -28,9 +28,10 @@ const CATEGORIES: readonly OpportunityCategory[] = [
 ] as const;
 
 function parseCategory(name: string): OpportunityCategory {
+  if (name === "NGO Jobs") return "Jobs";
   return (CATEGORIES.includes(name as OpportunityCategory)
     ? name
-    : "NGO Jobs") as OpportunityCategory;
+    : "Jobs") as OpportunityCategory;
 }
 
 const WORK: Record<PrismaWorkArrangement, WorkArrangement> = {
@@ -106,7 +107,7 @@ export function mapOpportunityRecord(row: OpportunityRow): Opportunity {
     title: row.title,
     organizationId: row.organizationId,
     organizationName: row.organization.name,
-    category: parseCategory(row.category?.nameEn ?? "NGO Jobs"),
+    category: parseCategory(row.category?.nameEn ?? "Jobs"),
     location: row.location ?? "",
     deadline,
     type: row.type,

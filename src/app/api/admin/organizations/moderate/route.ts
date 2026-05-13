@@ -4,7 +4,7 @@ import { z } from "zod";
 import { assertAppOrigin } from "@/lib/assert-app-origin";
 import { authOptions } from "@/lib/auth-options";
 import {
-  sendOrganizationApprovedEmail,
+  sendOrganizationApprovedEmailToAll,
   sendOrganizationRejectedEmail,
 } from "@/lib/email/transactional";
 import { getPrisma } from "@/lib/prisma";
@@ -63,8 +63,7 @@ export async function POST(req: Request) {
       email: true,
       verificationStatus: true,
       users: {
-        where: { role: "ORG_USER" },
-        take: 1,
+        where: { role: "ORG_USER", isActive: true },
         select: { email: true },
       },
     },
@@ -77,7 +76,11 @@ export async function POST(req: Request) {
     );
   }
 
-  const notifyTo = org.email?.trim() || org.users[0]?.email?.trim() || null;
+  const notifyEmails = new Set<string>();
+  if (org.email?.trim()) notifyEmails.add(org.email.trim());
+  for (const u of org.users) {
+    if (u.email?.trim()) notifyEmails.add(u.email.trim());
+  }
 
   try {
     if (action === "approve") {
@@ -88,8 +91,13 @@ export async function POST(req: Request) {
           verifiedAt: new Date(),
         },
       });
-      if (notifyTo?.includes("@")) {
-        sendOrganizationApprovedEmail(notifyTo, org.name);
+      if (notifyEmails.size > 0) {
+        sendOrganizationApprovedEmailToAll([...notifyEmails], org.name);
+      } else {
+        console.warn(
+          "[email] organization approved but no recipient email on file for org",
+          org.id,
+        );
       }
     } else {
       await prisma.organization.update({
@@ -99,8 +107,15 @@ export async function POST(req: Request) {
           verifiedAt: null,
         },
       });
-      if (notifyTo?.includes("@")) {
-        sendOrganizationRejectedEmail(notifyTo, org.name);
+      if (notifyEmails.size > 0) {
+        for (const to of notifyEmails) {
+          sendOrganizationRejectedEmail(to, org.name);
+        }
+      } else {
+        console.warn(
+          "[email] organization rejected but no recipient email on file for org",
+          org.id,
+        );
       }
     }
   } catch (e) {

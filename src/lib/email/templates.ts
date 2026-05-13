@@ -149,14 +149,15 @@ export function buildOrganizationApprovedEmail(orgName: string): {
   const o = escapeHtml(orgName);
   const origin = siteOrigin();
   const inner = `
-    <h1 style="margin:0 0 12px 0;font-size:20px;color:#0f172a;">Organization approved</h1>
-    <p style="margin:0;">Good news — <strong>${o}</strong> can now post opportunities on MasrJobs.org (subject to listing review).</p>
-    ${cta(`${origin}/dashboard/organization`, "Go to organization dashboard")}
+    <h1 style="margin:0 0 12px 0;font-size:20px;color:#0f172a;">Approval confirmed</h1>
+    <p style="margin:0;">This email confirms that <strong>${o}</strong> has been <strong>approved</strong> on MasrJobs.org.</p>
+    <p style="margin:16px 0 0 0;">Your team may now submit opportunities for administrator review before they go live on the public directory.</p>
+    ${cta(`${origin}/dashboard/organization`, "Open employer workspace")}
   `;
-  const text = `Organization approved — MasrJobs\n\n${orgName} can post opportunities.\n\n${origin}/dashboard/organization\n\n${emailFooterText()}`;
+  const text = `Confirmation: organization approved — MasrJobs\n\n${orgName} is approved on MasrJobs.org. You can post opportunities (each listing is still reviewed before publication).\n\n${origin}/dashboard/organization\n\n${emailFooterText()}`;
   return {
-    subject: "Your organization is approved on MasrJobs.org",
-    html: wrapEmailHtml(inner, "Your organization can post on MasrJobs."),
+    subject: "Confirmation: your organization is approved on MasrJobs.org",
+    html: wrapEmailHtml(inner, "Your organization registration is approved."),
     text,
   };
 }

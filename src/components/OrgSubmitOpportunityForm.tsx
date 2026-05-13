@@ -14,7 +14,7 @@ import {
 } from "@/lib/org-submit-form-profile";
 
 const CATEGORIES: OpportunityCategory[] = [
-  "NGO Jobs",
+  "Jobs",
   "Consultancies",
   "Trainings",
   "Volunteer Roles",
@@ -36,7 +36,7 @@ function isValidApplicationEmail(s: string) {
 function emptyForm(): OrgOpportunitySubmissionInput {
   return {
     title: "",
-    category: "NGO Jobs",
+    category: "Jobs",
     type: "",
     location: "",
     deadline: "",
@@ -189,7 +189,7 @@ export function OrgSubmitOpportunityForm() {
       <p className="mt-1 text-sm text-foreground/70">
         Use this form for every service type MasrJobs.org supports:{" "}
         <strong>
-          NGO jobs, consultancies, trainings, volunteer roles, tenders, and grants
+          jobs, consultancies, trainings, volunteer roles, tenders, and grants
         </strong>
         . All posts are reviewed by administrators before going live.
       </p>

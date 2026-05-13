@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { loadPublishedCatalog } from "@/lib/db/catalog-queries";
 
-export const revalidate = 120;
+/** Public catalog must reflect org verification promptly after admin approval. */
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const prisma = getPrisma();

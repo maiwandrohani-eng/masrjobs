@@ -37,7 +37,7 @@ export default function Home() {
             </div>
             <ul className="mt-8 flex flex-wrap gap-2 text-xs font-medium text-brand-navy/80">
               {[
-                "NGO Jobs",
+                "Jobs",
                 "Consultancies",
                 "Trainings",
                 "Volunteering",

@@ -10,7 +10,7 @@ import { usePersistedViewMode } from "@/hooks/usePersistedViewMode";
 import { cn } from "@/lib/cn";
 
 const CATEGORIES: OpportunityCategory[] = [
-  "NGO Jobs",
+  "Jobs",
   "Consultancies",
   "Trainings",
   "Volunteer Roles",

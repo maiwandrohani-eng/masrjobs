@@ -59,8 +59,8 @@ async function main() {
       data: [
         {
           id: IDS.catNgo,
-          nameEn: "NGO Jobs",
-          slug: "ngo-jobs",
+          nameEn: "Jobs",
+          slug: "jobs",
         },
         {
           id: IDS.catConsult,
