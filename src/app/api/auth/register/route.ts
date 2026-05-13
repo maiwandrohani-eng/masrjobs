@@ -151,8 +151,45 @@ export async function POST(req: Request) {
       });
     }
   } catch (e) {
-    console.error(e);
-    return NextResponse.json({ ok: false, error: "Registration failed" }, { status: 500 });
+    console.error("POST /api/auth/register", e);
+    if (e && typeof e === "object" && "code" in e) {
+      const code = String((e as { code: unknown }).code);
+      if (code === "P2002") {
+        return NextResponse.json(
+          { ok: false, error: "Email already registered" },
+          { status: 409 },
+        );
+      }
+      if (code === "P2021" || code === "P2022") {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "Database is missing required tables. Apply the Prisma schema to this Neon database (e.g. prisma db push), then try again.",
+          },
+          { status: 503 },
+        );
+      }
+      if (
+        code === "P1001" ||
+        code === "P1000" ||
+        code === "P1002" ||
+        code === "P1017"
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "Could not reach the database. Check DATABASE_URL (use Neon’s pooled URL; remove channel_binding=require if present) and try again.",
+          },
+          { status: 503 },
+        );
+      }
+    }
+    return NextResponse.json(
+      { ok: false, error: "Registration failed. Try again or contact support if it persists." },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ ok: true });

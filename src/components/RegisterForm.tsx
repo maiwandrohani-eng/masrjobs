@@ -13,6 +13,25 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** API may return `error` as a string or Zod-style field maps (string[][]). */
+function registerApiErrorMessage(error: unknown): string {
+  if (typeof error === "string" && error.trim()) return error;
+  if (!error || typeof error !== "object") {
+    return "Registration failed. Check your details and try again.";
+  }
+  const lines: string[] = [];
+  for (const value of Object.values(error as Record<string, unknown>)) {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (typeof item === "string" && item.trim()) lines.push(item);
+      }
+    }
+  }
+  return lines.length > 0
+    ? lines.join(" ")
+    : "Registration failed. Check your details and try again.";
+}
+
 export function RegisterForm() {
   const router = useRouter();
   const { login, registerPendingOrganization, registerUserProfile } =
@@ -87,6 +106,7 @@ export function RegisterForm() {
     setBusy(true);
     const res = await fetch("/api/auth/register", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: email.trim(),
@@ -105,10 +125,8 @@ export function RegisterForm() {
       setBusy(false);
       if (res.status === 409) {
         setError("That email is already registered. Try logging in.");
-      } else if (typeof data.error === "string") {
-        setError(data.error);
       } else {
-        setError("Registration failed. Check your details and try again.");
+        setError(registerApiErrorMessage(data.error));
       }
       return;
     }
