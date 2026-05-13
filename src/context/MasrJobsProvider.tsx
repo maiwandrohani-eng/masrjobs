@@ -250,20 +250,23 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   const refreshNeonCatalog = useCallback(() => {
     if (demoMode) return;
     void fetch("/api/catalog")
-      .then((r) => r.json())
-      .then(
-        (d: {
+      .then(async (res) => {
+        const d = (await res.json().catch(() => ({}))) as {
           opportunities?: Opportunity[];
           organizations?: Organization[];
-        }) => {
-          setNeonCatalog({
-            opportunities: d.opportunities ?? [],
-            organizations: d.organizations ?? [],
-          });
-        },
-      )
-      .catch(() => {
-        setNeonCatalog({ opportunities: [], organizations: [] });
+          error?: string;
+        };
+        if (!res.ok) {
+          console.warn("[catalog] /api/catalog failed", res.status, d?.error);
+          return;
+        }
+        setNeonCatalog({
+          opportunities: d.opportunities ?? [],
+          organizations: d.organizations ?? [],
+        });
+      })
+      .catch((err) => {
+        console.warn("[catalog] /api/catalog network error", err);
       });
   }, [demoMode]);
 
@@ -662,8 +665,8 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
     );
     const fromExtras = extraOpportunities.filter(isPublishedCatalogOpportunity);
     const byId = new Map<string, Opportunity>();
-    for (const o of fromCatalog) byId.set(o.id, o);
     for (const o of fromExtras) byId.set(o.id, o);
+    for (const o of fromCatalog) byId.set(o.id, o);
     return [...byId.values()];
   }, [catalogOpportunities, extraOpportunities, suppressedCatalogIds]);
 
