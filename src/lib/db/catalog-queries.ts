@@ -1,4 +1,7 @@
-import type { PrismaClient } from "@/generated/prisma/client";
+import type {
+  Organization as PrismaOrganization,
+  PrismaClient,
+} from "@/generated/prisma/client";
 import {
   mapOpportunityRecord,
   mapOrganizationRecord,
@@ -33,6 +36,26 @@ export async function loadDirectoryOrganizations(
     });
     return rows.map(mapOrganizationRecord);
   }, []);
+}
+
+/** Public organization profile: match by primary key or public slug. */
+export async function loadPublicOrganizationByRef(
+  prisma: PrismaClient,
+  ref: string,
+): Promise<PrismaOrganization | null> {
+  const normalized = ref.trim();
+  if (!normalized) return null;
+  return safe(
+    () =>
+      prisma.organization.findFirst({
+        where: {
+          OR: [{ id: normalized }, { slug: normalized }],
+          verificationStatus: { not: "REJECTED" },
+          isActive: true,
+        },
+      }),
+    null,
+  );
 }
 
 export async function loadPublishedOpportunityRows(

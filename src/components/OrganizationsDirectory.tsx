@@ -20,21 +20,7 @@ function scrollToOrgAnchor(anchorId: string): boolean {
   return true;
 }
 
-/** This directory only renders on `/organizations` — “View profile” scrolls in-page (no router/hash quirks). */
-function scrollOrganizationIntoView(anchorId: string) {
-  if (typeof window === "undefined") return;
-  const url = `${window.location.pathname}${window.location.search}#${anchorId}`;
-  window.history.replaceState(null, "", url);
-  const run = () => scrollToOrgAnchor(anchorId);
-  run();
-  requestAnimationFrame(run);
-  queueMicrotask(() => {
-    run();
-    setTimeout(run, 0);
-    setTimeout(run, 80);
-    setTimeout(run, 250);
-  });
-}
+/** Deep links to `/organizations#org-…` (bookmark / email) scroll the directory list. */
 
 export function OrganizationsDirectory({ organizations }: { organizations: Organization[] }) {
   const { mode, setMode } = usePersistedViewMode("masrjobs:v1:viewOrganizationsDirectory");
@@ -118,13 +104,12 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
                 {org.description}
               </p>
               <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => scrollOrganizationIntoView(orgAnchorId(org.id))}
-                  className="inline-flex min-h-[2.75rem] items-center justify-center rounded-lg bg-brand-navy px-4 py-2.5 text-center text-sm font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:min-h-0"
+                <Link
+                  href={`/organizations/${encodeURIComponent(org.slug)}`}
+                  className="inline-flex min-h-[2.75rem] cursor-pointer items-center justify-center rounded-lg bg-brand-navy px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:min-h-0"
                 >
                   View profile
-                </button>
+                </Link>
                 <Link
                   href={`/opportunities?orgId=${encodeURIComponent(org.id)}`}
                   className="inline-flex min-h-[2.75rem] items-center justify-center rounded-lg border border-brand-border px-4 py-2.5 text-center text-sm font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:min-h-0"
@@ -186,13 +171,12 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
                 </p>
               </div>
               <div className="mt-3 flex shrink-0 flex-col gap-2 sm:mt-0 sm:items-end">
-                <button
-                  type="button"
-                  onClick={() => scrollOrganizationIntoView(orgAnchorId(org.id))}
-                  className="inline-flex min-h-[2.75rem] w-full items-center justify-center rounded-lg bg-brand-navy px-3 py-2 text-xs font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:w-auto sm:min-h-0"
+                <Link
+                  href={`/organizations/${encodeURIComponent(org.slug)}`}
+                  className="inline-flex min-h-[2.75rem] w-full cursor-pointer items-center justify-center rounded-lg bg-brand-navy px-3 py-2 text-center text-xs font-semibold text-white shadow-sm hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:w-auto sm:min-h-0"
                 >
                   View profile
-                </button>
+                </Link>
                 <Link
                   href={`/opportunities?orgId=${encodeURIComponent(org.id)}`}
                   className="inline-flex min-h-[2.75rem] w-full items-center justify-center rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:w-auto sm:min-h-0"
