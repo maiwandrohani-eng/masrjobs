@@ -20,7 +20,10 @@ const CATEGORIES: OpportunityCategory[] = [
 
 type Props = {
   opportunities: Opportunity[];
+  /** Legacy `?org=` filter by exact public organization name (still supported). */
   initialOrganization?: string;
+  /** Preferred `?orgId=` filter by organization primary key (stable across renames). */
+  initialOrganizationId?: string;
   /** From URL `?category=` — must match an OpportunityCategory label or ignored. */
   initialCategory?: string | null;
 };
@@ -36,6 +39,7 @@ function categoryFromParam(raw: string | null | undefined): OpportunityCategory 
 export function OpportunitiesExplorer({
   opportunities,
   initialOrganization = "",
+  initialOrganizationId = "",
   initialCategory = null,
 }: Props) {
   const [q, setQ] = useState("");
@@ -43,7 +47,10 @@ export function OpportunitiesExplorer({
     categoryFromParam(initialCategory),
   );
   const [location, setLocation] = useState("");
-  const [org, setOrg] = useState(initialOrganization);
+  const [orgIdFilter, setOrgIdFilter] = useState(() => initialOrganizationId.trim());
+  const [orgNameFilter, setOrgNameFilter] = useState(() =>
+    initialOrganizationId.trim() ? "" : initialOrganization.trim(),
+  );
   const [type, setType] = useState("");
   const [work, setWork] = useState<string>("All");
   const [paid, setPaid] = useState<string>("All");
@@ -56,9 +63,18 @@ export function OpportunitiesExplorer({
     setCategory(categoryFromParam(initialCategory));
   }, [initialCategory]);
 
-  const orgs = useMemo(() => {
-    const s = new Set(opportunities.map((o) => o.organizationName));
-    return [...s].sort();
+  useEffect(() => {
+    const id = initialOrganizationId.trim();
+    setOrgIdFilter(id);
+    setOrgNameFilter(id ? "" : initialOrganization.trim());
+  }, [initialOrganizationId, initialOrganization]);
+
+  const orgOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const o of opportunities) {
+      if (!m.has(o.organizationId)) m.set(o.organizationId, o.organizationName);
+    }
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [opportunities]);
 
   const types = useMemo(() => {
@@ -71,7 +87,8 @@ export function OpportunitiesExplorer({
       if (category !== "All" && o.category !== category) return false;
       if (location && !o.location.toLowerCase().includes(location.toLowerCase()))
         return false;
-      if (org && o.organizationName !== org) return false;
+      if (orgIdFilter && o.organizationId !== orgIdFilter) return false;
+      if (!orgIdFilter && orgNameFilter && o.organizationName !== orgNameFilter) return false;
       if (type && o.type !== type) return false;
       if (work !== "All" && o.workArrangement !== work) return false;
       if (paid === "Paid" && o.compensation !== "Paid") return false;
@@ -88,7 +105,8 @@ export function OpportunitiesExplorer({
     q,
     category,
     location,
-    org,
+    orgIdFilter,
+    orgNameFilter,
     type,
     work,
     paid,
@@ -130,13 +148,17 @@ export function OpportunitiesExplorer({
         <div>
           <label className="text-xs font-semibold text-brand-navy">Organization</label>
           <select
-            value={org}
-            onChange={(e) => setOrg(e.target.value)}
+            value={orgIdFilter}
+            onChange={(e) => {
+              const v = e.target.value;
+              setOrgIdFilter(v);
+              setOrgNameFilter("");
+            }}
             className="mt-1 w-full rounded-lg border border-brand-border bg-white py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
           >
             <option value="">All organizations</option>
-            {orgs.map((name) => (
-              <option key={name} value={name}>
+            {orgOptions.map(([id, name]) => (
+              <option key={id} value={id}>
                 {name}
               </option>
             ))}
@@ -206,7 +228,8 @@ export function OpportunitiesExplorer({
             setQ("");
             setCategory("All");
             setLocation("");
-            setOrg("");
+            setOrgIdFilter("");
+            setOrgNameFilter("");
             setType("");
             setWork("All");
             setPaid("All");

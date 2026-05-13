@@ -1,17 +1,27 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { Award, BadgeCheck, MapPin } from "lucide-react";
 import type { Organization } from "@/lib/types";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { usePersistedViewMode } from "@/hooks/usePersistedViewMode";
 
-function orgAnchorId(slug: string) {
-  return `org-${slug}`;
+/** Stable fragment id across organization renames (slug and public name can change). */
+function orgAnchorId(organizationId: string) {
+  return `org-${organizationId}`;
 }
 
 export function OrganizationsDirectory({ organizations }: { organizations: Organization[] }) {
   const { mode, setMode } = usePersistedViewMode("masrjobs:v1:viewOrganizationsDirectory");
+
+  useEffect(() => {
+    if (typeof window === "undefined" || organizations.length === 0) return;
+    const raw = window.location.hash.replace(/^#/, "");
+    if (!raw.startsWith("org-")) return;
+    const el = document.getElementById(raw);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [organizations]);
 
   return (
     <div>
@@ -33,7 +43,7 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
           {organizations.map((org) => (
             <article
               key={org.id}
-              id={orgAnchorId(org.slug)}
+              id={orgAnchorId(org.id)}
               className="flex h-full scroll-mt-24 flex-col rounded-2xl border border-brand-border bg-white p-6 shadow-sm"
             >
               <div className="flex items-start justify-between gap-3">
@@ -72,13 +82,13 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
               </p>
               <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <Link
-                  href={`/organizations#${orgAnchorId(org.slug)}`}
+                  href={`/organizations#${orgAnchorId(org.id)}`}
                   className="inline-flex min-h-[2.75rem] items-center justify-center rounded-lg bg-brand-navy px-4 py-2.5 text-center text-sm font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:min-h-0"
                 >
                   View profile
                 </Link>
                 <Link
-                  href={`/opportunities?org=${encodeURIComponent(org.name)}`}
+                  href={`/opportunities?orgId=${encodeURIComponent(org.id)}`}
                   className="inline-flex min-h-[2.75rem] items-center justify-center rounded-lg border border-brand-border px-4 py-2.5 text-center text-sm font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:min-h-0"
                 >
                   View opportunities
@@ -102,7 +112,7 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
           {organizations.map((org) => (
             <li
               key={org.id}
-              id={orgAnchorId(org.slug)}
+              id={orgAnchorId(org.id)}
               className="scroll-mt-24 px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-4"
             >
               <div className="min-w-0 flex-1">
@@ -139,13 +149,13 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
               </div>
               <div className="mt-3 flex shrink-0 flex-col gap-2 sm:mt-0 sm:items-end">
                 <Link
-                  href={`/organizations#${orgAnchorId(org.slug)}`}
+                  href={`/organizations#${orgAnchorId(org.id)}`}
                   className="inline-flex min-h-[2.75rem] w-full items-center justify-center rounded-lg bg-brand-navy px-3 py-2 text-xs font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:w-auto sm:min-h-0"
                 >
                   View profile
                 </Link>
                 <Link
-                  href={`/opportunities?org=${encodeURIComponent(org.name)}`}
+                  href={`/opportunities?orgId=${encodeURIComponent(org.id)}`}
                   className="inline-flex min-h-[2.75rem] w-full items-center justify-center rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:w-auto sm:min-h-0"
                 >
                   View opportunities

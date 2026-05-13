@@ -7,8 +7,11 @@ import { useMasrJobs } from "@/context/MasrJobsProvider";
 
 export function OpportunitiesPageClient() {
   const searchParams = useSearchParams();
+  const orgIdFilter = searchParams.get("orgId")
+    ? decodeURIComponent(searchParams.get("orgId")!.trim())
+    : "";
   const orgFilter = searchParams.get("org")
-    ? decodeURIComponent(searchParams.get("org")!)
+    ? decodeURIComponent(searchParams.get("org")!.trim())
     : "";
   const categoryFilter = searchParams.get("category");
   const { opportunities, hydrated } = useMasrJobs();
@@ -26,7 +29,8 @@ export function OpportunitiesPageClient() {
         ) : (
           <OpportunitiesExplorer
             opportunities={opportunities}
-            initialOrganization={orgFilter}
+            initialOrganizationId={orgIdFilter}
+            initialOrganization={orgIdFilter ? "" : orgFilter}
             initialCategory={categoryFilter}
           />
         )}
