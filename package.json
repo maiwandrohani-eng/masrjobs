@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "db:bootstrap-user": "tsx scripts/bootstrap-user.ts"
+    "db:bootstrap-user": "tsx scripts/bootstrap-user.ts",
+    "db:bootstrap-admin": "tsx scripts/bootstrap-user.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

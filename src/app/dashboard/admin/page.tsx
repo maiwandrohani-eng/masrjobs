@@ -117,12 +117,42 @@ export default function AdminDashboardPage() {
               : "Restricted to platform administrators. Sign in with an administrator account issued for MasrJobs.org."
           }
         />
-        <Link
-          href="/login"
-          className="inline-flex rounded-xl bg-brand-navy px-5 py-2.5 text-sm font-semibold text-white"
-        >
-          Admin sign in
-        </Link>
+        {!previewAuth ? (
+          <div className="mt-6 max-w-2xl rounded-2xl border border-brand-border bg-brand-muted/40 p-5 text-sm text-foreground/85">
+            <p className="font-semibold text-brand-navy">Why your Gmail might show “Invalid email or password”</p>
+            <ul className="mt-3 list-inside list-disc space-y-2">
+              <li>
+                <strong>Registration never creates admins.</strong> If you only registered at{" "}
+                <Link href="/register" className="font-semibold text-brand-gold underline">
+                  Register
+                </Link>
+                , your account is an applicant or employer, not an administrator.
+              </li>
+              <li>
+                After running <code className="rounded bg-white px-1 py-0.5 text-xs">npx prisma db seed</code>
+                , you can sign in as{" "}
+                <code className="rounded bg-white px-1 py-0.5 text-xs">admin@masrjobs.local</code> with
+                password <code className="rounded bg-white px-1 py-0.5 text-xs">MasrjobsSeedPass123</code>{" "}
+                (change it after first login).
+              </li>
+              <li>
+                To use <strong>your own email</strong> (e.g. Gmail) as admin, run once from the project folder
+                (with <code className="rounded bg-white px-1 py-0.5 text-xs">DATABASE_URL</code> set):{" "}
+                <code className="mt-2 block whitespace-pre-wrap break-all rounded bg-white p-2 text-xs text-brand-navy">
+                  {`BOOTSTRAP_ROLE=ADMIN BOOTSTRAP_EMAIL=you@gmail.com BOOTSTRAP_PASSWORD='YourSecurePass12+' npx tsx scripts/bootstrap-user.ts`}
+                </code>
+              </li>
+            </ul>
+          </div>
+        ) : null}
+        <div className="mt-6">
+          <Link
+            href="/login"
+            className="inline-flex rounded-xl bg-brand-navy px-5 py-2.5 text-sm font-semibold text-white"
+          >
+            Admin sign in
+          </Link>
+        </div>
       </PageShell>
     );
   }
