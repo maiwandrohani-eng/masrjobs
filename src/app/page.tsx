@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { HomeCatalog } from "@/components/HomeCatalog";
+import { HomeExplore } from "@/components/HomeExplore";
 import { LogoMark } from "@/components/LogoMark";
 
 export default function Home() {
@@ -74,6 +75,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <HomeExplore />
 
       <Suspense fallback={null}>
         <HomeCatalog />

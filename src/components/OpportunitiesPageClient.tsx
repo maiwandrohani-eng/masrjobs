@@ -10,6 +10,7 @@ export function OpportunitiesPageClient() {
   const orgFilter = searchParams.get("org")
     ? decodeURIComponent(searchParams.get("org")!)
     : "";
+  const categoryFilter = searchParams.get("category");
   const { opportunities, hydrated } = useMasrJobs();
 
   return (
@@ -26,6 +27,7 @@ export function OpportunitiesPageClient() {
           <OpportunitiesExplorer
             opportunities={opportunities}
             initialOrganization={orgFilter}
+            initialCategory={categoryFilter}
           />
         )}
       </PageShell>

@@ -59,6 +59,27 @@ export function SiteFooter() {
               >
                 Resources
               </Link>
+              <Link
+                href="/how-it-works"
+                className="text-white/75 hover:text-brand-gold-soft"
+              >
+                How it works
+              </Link>
+              <Link
+                href="/sectors"
+                className="text-white/75 hover:text-brand-gold-soft"
+              >
+                Browse by theme
+              </Link>
+              <Link
+                href="/posting-guidelines"
+                className="text-white/75 hover:text-brand-gold-soft"
+              >
+                Posting guidelines
+              </Link>
+              <Link href="/events" className="text-white/75 hover:text-brand-gold-soft">
+                Events
+              </Link>
             </div>
             <div className="flex flex-col gap-2">
               <div className="font-semibold text-brand-gold-soft">Company</div>
@@ -67,6 +88,15 @@ export function SiteFooter() {
               </Link>
               <Link href="/contact" className="text-white/75 hover:text-brand-gold-soft">
                 Contact
+              </Link>
+              <Link href="/partners" className="text-white/75 hover:text-brand-gold-soft">
+                Partners
+              </Link>
+              <Link href="/impact" className="text-white/75 hover:text-brand-gold-soft">
+                Transparency
+              </Link>
+              <Link href="/spotlights" className="text-white/75 hover:text-brand-gold-soft">
+                Employer spotlights
               </Link>
             </div>
             <div className="flex flex-col gap-2">

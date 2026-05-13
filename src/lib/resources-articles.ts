@@ -134,6 +134,37 @@ export const RESOURCE_ARTICLES: ResourceArticleBody[] = [
       },
     ],
   },
+  {
+    slug: "internal-application-checklist-masrjobs",
+    title: "Internal application checklist for MasrJobs.org",
+    excerpt:
+      "Before you submit through the platform: documents, tone, and double-checks that save time for you and recruiters.",
+    category: "Careers",
+    publishedAt: "2026-05-12",
+    sections: [
+      {
+        heading: "Profile and attachments",
+        paragraphs: [
+          "Complete your applicant profile with accurate contact details, CV or resume link, and any links the listing requests (e.g. LinkedIn, portfolio). Use working URLs and files employers can open without special permissions.",
+          "Match your profile name to the name you use on your CV so reviewers can reconcile documents quickly.",
+        ],
+      },
+      {
+        heading: "Tailor to the listing",
+        paragraphs: [
+          "Mirror key language from the opportunity title and requirements in your cover letter or motivation text, but avoid copying large blocks verbatim. Show you read the TOR or job description.",
+          "If the role mentions languages, locations, or security clearances, state your situation plainly — partial eligibility is better than silent gaps.",
+        ],
+      },
+      {
+        heading: "Before you click submit",
+        paragraphs: [
+          "Re-read for typos, broken links, and the correct opportunity title in your letter. Confirm you chose the right application channel (internal vs email vs external) if the listing offers more than one path.",
+          "Keep a copy of what you submitted and the deadline. Follow up only through channels the employer invites — unsolicited bulk messages rarely help.",
+        ],
+      },
+    ],
+  },
 ];
 
 export function getResourceArticle(slug: string): ResourceArticleBody | undefined {

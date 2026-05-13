@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import type { Opportunity, OpportunityCategory } from "@/lib/types";
 import { OpportunityCard } from "@/components/OpportunityCard";
@@ -21,14 +21,27 @@ const CATEGORIES: OpportunityCategory[] = [
 type Props = {
   opportunities: Opportunity[];
   initialOrganization?: string;
+  /** From URL `?category=` — must match an OpportunityCategory label or ignored. */
+  initialCategory?: string | null;
 };
+
+function categoryFromParam(raw: string | null | undefined): OpportunityCategory | "All" {
+  if (!raw?.trim()) return "All";
+  const decoded = decodeURIComponent(raw.trim());
+  return CATEGORIES.includes(decoded as OpportunityCategory)
+    ? (decoded as OpportunityCategory)
+    : "All";
+}
 
 export function OpportunitiesExplorer({
   opportunities,
   initialOrganization = "",
+  initialCategory = null,
 }: Props) {
   const [q, setQ] = useState("");
-  const [category, setCategory] = useState<OpportunityCategory | "All">("All");
+  const [category, setCategory] = useState<OpportunityCategory | "All">(() =>
+    categoryFromParam(initialCategory),
+  );
   const [location, setLocation] = useState("");
   const [org, setOrg] = useState(initialOrganization);
   const [type, setType] = useState("");
@@ -38,6 +51,10 @@ export function OpportunitiesExplorer({
   const { mode: viewMode, setMode: setViewMode } = usePersistedViewMode(
     "masrjobs:v1:viewOpportunitiesBrowse",
   );
+
+  useEffect(() => {
+    setCategory(categoryFromParam(initialCategory));
+  }, [initialCategory]);
 
   const orgs = useMemo(() => {
     const s = new Set(opportunities.map((o) => o.organizationName));
