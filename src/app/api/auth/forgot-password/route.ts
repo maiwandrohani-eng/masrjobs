@@ -4,7 +4,7 @@ import { z } from "zod";
 import { assertAppOrigin } from "@/lib/assert-app-origin";
 import { getPrisma } from "@/lib/prisma";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
-import { sendPasswordResetEmail } from "@/lib/send-password-reset-email";
+import { sendPasswordResetEmailNow } from "@/lib/email/transactional";
 
 const bodySchema = z.object({
   email: z.string().email().max(254),
@@ -109,10 +109,10 @@ export async function POST(req: Request) {
   });
 
   const resetUrl = `${base}/reset-password?token=${encodeURIComponent(token)}`;
-  const sent = await sendPasswordResetEmail(user.email, resetUrl);
+  const sent = await sendPasswordResetEmailNow(user.email, resetUrl);
   if (!sent.ok) {
     await prisma.passwordResetToken.deleteMany({ where: { token } });
-    console.error("PASSWORD_RESET email failed:", sent.status, sent.body);
+    console.error("PASSWORD_RESET email failed:", sent.error);
     return NextResponse.json(
       { ok: false, error: "Could not send reset email. Try again later." },
       { status: 503 },

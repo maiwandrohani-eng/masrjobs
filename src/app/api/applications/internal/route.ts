@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth-options";
+import { sendApplicationSubmittedBundle } from "@/lib/email/transactional";
 import { getPrisma } from "@/lib/prisma";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
@@ -119,6 +120,27 @@ export async function POST(req: Request) {
         portfolioUrl: empty(d.portfolioUrl),
       },
     });
+
+    const detail = await prisma.opportunity.findUnique({
+      where: { id: dbOpp.id },
+      select: {
+        title: true,
+        applicationEmail: true,
+        organization: { select: { name: true, email: true } },
+      },
+    });
+    const applicantName =
+      [session.user.name].filter(Boolean).join(" ").trim() || d.applicantFullName.trim();
+    const orgNotify =
+      detail?.applicationEmail?.trim() || detail?.organization.email?.trim() || null;
+    sendApplicationSubmittedBundle({
+      applicantEmail: session.user.email,
+      applicantName,
+      opportunityTitle: detail?.title ?? "Opportunity",
+      organizationName: detail?.organization.name ?? "Organization",
+      orgNotifyEmail: orgNotify,
+    });
+
     return NextResponse.json({ ok: true, id: app.id, table: "Application" });
   } catch (e) {
     console.error(e);

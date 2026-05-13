@@ -62,6 +62,16 @@ function normEmail(e: string) {
   return e.trim().toLowerCase();
 }
 
+function postTransactionalEmail(path: string, body: unknown) {
+  if (typeof window === "undefined" || isDemoAuthEnabled()) return;
+  void fetch(path, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).catch(() => {});
+}
+
 function loadJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
@@ -852,6 +862,13 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
           message:
             "Your organization can now post opportunities on MasrJobs.org (demo: stored in this browser).",
         });
+        queueMicrotask(() => {
+          postTransactionalEmail("/api/admin/transactional-email", {
+            kind: "organization-approved",
+            to: row.email.trim(),
+            organizationName: row.name,
+          });
+        });
         return prev.filter((p) => p.id !== id);
       });
     },
@@ -870,6 +887,13 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
           title: "Account not approved",
           message:
             "Your organization registration was not approved in this demo workflow.",
+        });
+        queueMicrotask(() => {
+          postTransactionalEmail("/api/admin/transactional-email", {
+            kind: "organization-rejected",
+            to: row.email.trim(),
+            organizationName: row.name,
+          });
         });
         return prev.filter((p) => p.id !== id);
       });
@@ -902,6 +926,14 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
                   message: `“${item.title}” is now live on the public opportunities page.`,
                 }),
               );
+              queueMicrotask(() => {
+                postTransactionalEmail("/api/admin/transactional-email", {
+                  kind: "opportunity-approved",
+                  to: em,
+                  opportunityTitle: item.title,
+                  organizationName: item.organizationName,
+                });
+              });
             }
             return next;
           });
@@ -953,6 +985,14 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
                   message: `“${row.title}” was not approved for public listing.`,
                 }),
               );
+              queueMicrotask(() => {
+                postTransactionalEmail("/api/admin/transactional-email", {
+                  kind: "opportunity-rejected",
+                  to: em,
+                  opportunityTitle: row.title,
+                  organizationName: row.organizationName,
+                });
+              });
             }
             return next;
           });
@@ -1065,6 +1105,20 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
               message: `Your application to “${target.opportunityTitle}” is now: ${status}.`,
             }),
           );
+        }
+        if (target.serverId && !isDemoAuthEnabled()) {
+          queueMicrotask(() => {
+            void fetch("/api/organization/transactional-email", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                kind: "application-status-updated",
+                applicationServerId: target.serverId,
+                statusLabel: status,
+              }),
+            }).catch(() => {});
+          });
         }
         return next;
       });
