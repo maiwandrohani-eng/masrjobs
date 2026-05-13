@@ -3,8 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Award, BadgeCheck, MapPin } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
-import { loadPublicOrganizationByRef } from "@/lib/db/catalog-queries";
-import { mapOrganizationRecord } from "@/lib/db/map-prisma-catalog";
+import {
+  loadPublicOrganizationByRef,
+  loadPublishedOpportunitiesForOrganization,
+} from "@/lib/db/catalog-queries";
+import { mapOrganizationRecord, mapOpportunityRecord } from "@/lib/db/map-prisma-catalog";
+import { formatOpportunityDeadline } from "@/lib/opportunity-display";
 import { getPrisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +50,15 @@ export default async function OrganizationProfilePage({ params }: Props) {
   if (!row) notFound();
 
   const org = mapOrganizationRecord(row);
+
+  const oppRows = await loadPublishedOpportunitiesForOrganization(prisma, org.id);
+  const listings = oppRows.flatMap((r) => {
+    try {
+      return [mapOpportunityRecord(r)];
+    } catch {
+      return [];
+    }
+  });
 
   return (
     <div className="min-h-[60vh] bg-background">
@@ -107,6 +120,51 @@ export default async function OrganizationProfilePage({ params }: Props) {
           ) : (
             <p className="mt-8 text-sm text-foreground/60">No public description yet.</p>
           )}
+
+          <section className="mt-10 border-t border-brand-border pt-8">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-gold">
+              Live opportunities on MasrJobs.org
+            </h2>
+            {listings.length === 0 ? (
+              <p className="mt-3 text-sm text-foreground/65">
+                No published listings right now. Use{" "}
+                <Link
+                  href="/opportunities"
+                  className="font-semibold text-brand-gold underline underline-offset-2"
+                >
+                  Browse all opportunities
+                </Link>{" "}
+                to see every open role on the platform.
+              </p>
+            ) : (
+              <ul className="mt-4 divide-y divide-brand-border rounded-xl border border-brand-border bg-brand-muted/30">
+                {listings.map((o) => (
+                  <li key={o.id} className="px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">
+                        {o.category}
+                      </p>
+                      <Link
+                        href={`/opportunities/${o.slug ?? o.id}`}
+                        className="mt-1 block text-base font-bold text-brand-navy hover:text-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50"
+                      >
+                        {o.title}
+                      </Link>
+                      <p className="mt-1 text-sm text-foreground/65">
+                        Deadline {formatOpportunityDeadline(o.deadline)} · {o.location || "Location TBC"}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/opportunities/${o.slug ?? o.id}`}
+                      className="mt-3 inline-flex shrink-0 rounded-lg border border-brand-border bg-white px-4 py-2 text-xs font-semibold text-brand-navy shadow-sm hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:mt-0"
+                    >
+                      Open listing
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
           <div className="mt-8 flex flex-col gap-3 border-t border-brand-border pt-8 sm:flex-row sm:flex-wrap">
             <Link

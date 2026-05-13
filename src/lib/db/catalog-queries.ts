@@ -78,11 +78,31 @@ export async function loadPublishedOpportunityRows(
   );
 }
 
+/** Published listings for a single employer (organization profile page). */
+export async function loadPublishedOpportunitiesForOrganization(
+  prisma: PrismaClient,
+  organizationId: string,
+): Promise<OpportunityRow[]> {
+  return safe(
+    () =>
+      prisma.opportunity.findMany({
+        where: {
+          organizationId,
+          status: "PUBLISHED",
+        },
+        include: opportunityInclude,
+        orderBy: { publishedAt: "desc" },
+      }),
+    [],
+  );
+}
+
 export async function loadPublishedCatalog(prisma: PrismaClient): Promise<{
   opportunities: Opportunity[];
   organizations: Organization[];
 }> {
-  return safe(async () => {
+  try {
+    const organizations = await loadDirectoryOrganizations(prisma);
     const rows = await loadPublishedOpportunityRows(prisma);
     const sorted = [...rows].sort((a, b) => {
       const ra = a.featured?.rank ?? -1;
@@ -92,12 +112,19 @@ export async function loadPublishedCatalog(prisma: PrismaClient): Promise<{
       const tb = b.publishedAt?.getTime() ?? b.createdAt.getTime();
       return tb - ta;
     });
-    const organizations = await loadDirectoryOrganizations(prisma);
-    return {
-      opportunities: sorted.map(mapOpportunityRecord),
-      organizations,
-    };
-  }, { opportunities: [], organizations: [] });
+    const opportunities: Opportunity[] = [];
+    for (const row of sorted) {
+      try {
+        opportunities.push(mapOpportunityRecord(row));
+      } catch (e) {
+        console.error("[catalog] mapOpportunityRecord failed", row?.id, e);
+      }
+    }
+    return { opportunities, organizations };
+  } catch (e) {
+    console.error("[catalog] loadPublishedCatalog", e);
+    return { opportunities: [], organizations: [] };
+  }
 }
 
 export async function loadOpportunityByRef(
