@@ -318,7 +318,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       STORAGE.pendingOrgs,
       null,
     );
-    if (pOrgs) setPendingOrganizations(pOrgs);
+    if (demo && pOrgs?.length) setPendingOrganizations(pOrgs);
     const pOpps = loadJson<PendingOppApproval[] | null>(
       STORAGE.pendingOpps,
       null,
@@ -387,6 +387,20 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   }, [demoMode, hydrated, session?.role, session?.email]);
 
   useEffect(() => {
+    if (!hydrated || demoMode || session?.role !== "admin") return;
+    let cancelled = false;
+    void fetch("/api/admin/pending-organizations", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { items?: PendingOrgRecord[] } | null) => {
+        if (!cancelled && d?.items) setPendingOrganizations(d.items);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, demoMode, session?.role, session?.email]);
+
+  useEffect(() => {
     if (!hydrated) return;
     localStorage.setItem(STORAGE.applications, JSON.stringify(applications));
   }, [applications, hydrated]);
@@ -397,12 +411,12 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   }, [orgListings, hydrated]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !demoMode) return;
     localStorage.setItem(
       STORAGE.pendingOrgs,
       JSON.stringify(pendingOrganizations),
     );
-  }, [pendingOrganizations, hydrated]);
+  }, [pendingOrganizations, hydrated, demoMode]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -846,6 +860,24 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
 
   const approveOrganization = useCallback(
     (id: string) => {
+      if (!demoMode) {
+        void (async () => {
+          try {
+            const res = await fetch("/api/admin/organizations/moderate", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ organizationId: id, action: "approve" }),
+            });
+            if (!res.ok) return;
+            setPendingOrganizations((prev) => prev.filter((p) => p.id !== id));
+            refreshNeonCatalog();
+          } catch {
+            /* ignore */
+          }
+        })();
+        return;
+      }
       setPendingOrganizations((prev) => {
         const row = prev.find((p) => p.id === id);
         if (!row) return prev;
@@ -872,11 +904,29 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
         return prev.filter((p) => p.id !== id);
       });
     },
-    [pushNotification],
+    [demoMode, pushNotification, refreshNeonCatalog],
   );
 
   const rejectOrganization = useCallback(
     (id: string) => {
+      if (!demoMode) {
+        void (async () => {
+          try {
+            const res = await fetch("/api/admin/organizations/moderate", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ organizationId: id, action: "reject" }),
+            });
+            if (!res.ok) return;
+            setPendingOrganizations((prev) => prev.filter((p) => p.id !== id));
+            refreshNeonCatalog();
+          } catch {
+            /* ignore */
+          }
+        })();
+        return;
+      }
       setPendingOrganizations((prev) => {
         const row = prev.find((p) => p.id === id);
         if (!row) return prev;
@@ -898,7 +948,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
         return prev.filter((p) => p.id !== id);
       });
     },
-    [pushNotification],
+    [demoMode, pushNotification, refreshNeonCatalog],
   );
 
   const approveOpportunitySubmission = useCallback(

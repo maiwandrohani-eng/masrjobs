@@ -82,8 +82,19 @@ export default function OrganizationDashboardPage() {
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <strong>Account pending:</strong> Your organization registration must be
           approved by MasrJobs.org administrators before you can publish new listings.
-          Demo: approve your work email from the admin console, or sign in with a
-          verified sample employer (e.g. Care Egypt Foundation).
+          {isDemoAuthEnabled() ? (
+            <>
+              {" "}
+              Demo: approve your work email from the admin console, or sign in with a
+              verified sample employer (e.g. Care Egypt Foundation).
+            </>
+          ) : (
+            <>
+              {" "}
+              An administrator will review your account in the admin console; you can
+              refresh this page after approval.
+            </>
+          )}
         </div>
       ) : null}
 
