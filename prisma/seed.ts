@@ -43,6 +43,7 @@ async function main() {
 
   await prisma.$transaction(async (tx) => {
     await tx.adminActionLog.deleteMany();
+    await tx.newsletterSubscription.deleteMany();
     await tx.passwordResetToken.deleteMany();
     await tx.externalApplyIntent.deleteMany();
     await tx.application.deleteMany();
