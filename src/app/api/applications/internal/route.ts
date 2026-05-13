@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
 import { z } from "zod";
+import { authOptions } from "@/lib/auth-options";
 import { getPrisma } from "@/lib/prisma";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
@@ -7,7 +9,6 @@ const bodySchema = z.object({
   listingId: z.string().min(1),
   organizationId: z.string().optional(),
   opportunityTitle: z.string().optional(),
-  applicantEmail: z.string().email(),
   applicantFullName: z.string().min(1),
   applicantPhone: z.string().min(1).max(80),
   cvUrl: z
@@ -27,6 +28,17 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { ok: false, error: "Too many requests", retryAfter: rl.retryAfter },
       { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || !session.user.email) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  if (session.user.role !== "INDIVIDUAL") {
+    return NextResponse.json(
+      { ok: false, error: "Only individual applicant accounts can submit applications." },
+      { status: 403 },
     );
   }
 
@@ -54,7 +66,6 @@ export async function POST(req: Request) {
   }
 
   const d = parsed.data;
-  const emailLower = d.applicantEmail.trim().toLowerCase();
   const empty = (s: string | undefined) => {
     const t = s?.trim();
     return t?.length ? t : undefined;
@@ -67,77 +78,48 @@ export async function POST(req: Request) {
         select: { id: true },
       }),
       prisma.user.findUnique({
-        where: { email: emailLower },
-        select: { id: true },
+        where: { id: session.user.id },
+        select: { id: true, isActive: true, role: true },
       }),
     ]);
 
-    /** When listing + user exist in Neon, use the canonical `Application` row (FK graph). */
-    if (dbOpp && dbUser) {
-      const app = await prisma.application.upsert({
-        where: {
-          opportunityId_userId: {
-            opportunityId: dbOpp.id,
-            userId: dbUser.id,
-          },
-        },
-        create: {
-          opportunityId: dbOpp.id,
-          userId: dbUser.id,
-          coverLetter: empty(d.coverLetter),
-          applicantFullName: d.applicantFullName.trim(),
-          applicantPhone: empty(d.applicantPhone),
-          cvUrl: empty(d.cvUrl),
-          linkedinUrl: empty(d.linkedinUrl),
-          portfolioUrl: empty(d.portfolioUrl),
-        },
-        update: {
-          coverLetter: empty(d.coverLetter),
-          applicantFullName: d.applicantFullName.trim(),
-          applicantPhone: empty(d.applicantPhone),
-          cvUrl: empty(d.cvUrl),
-          linkedinUrl: empty(d.linkedinUrl),
-          portfolioUrl: empty(d.portfolioUrl),
-        },
-      });
-      return NextResponse.json({ ok: true, id: app.id, table: "Application" });
+    if (!dbOpp) {
+      return NextResponse.json(
+        { ok: false, error: "Opportunity not found." },
+        { status: 404 },
+      );
+    }
+    if (!dbUser?.isActive || dbUser.role !== "INDIVIDUAL") {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const row = await prisma.internalListingApplication.upsert({
+    const app = await prisma.application.upsert({
       where: {
-        listingId_applicantEmail: {
-          listingId: d.listingId,
-          applicantEmail: emailLower,
+        opportunityId_userId: {
+          opportunityId: dbOpp.id,
+          userId: dbUser.id,
         },
       },
       create: {
-        listingId: d.listingId,
-        organizationId: empty(d.organizationId),
-        opportunityTitle: empty(d.opportunityTitle),
-        applicantEmail: emailLower,
+        opportunityId: dbOpp.id,
+        userId: dbUser.id,
+        coverLetter: empty(d.coverLetter),
         applicantFullName: d.applicantFullName.trim(),
         applicantPhone: empty(d.applicantPhone),
         cvUrl: empty(d.cvUrl),
         linkedinUrl: empty(d.linkedinUrl),
         portfolioUrl: empty(d.portfolioUrl),
-        coverLetter: empty(d.coverLetter),
       },
       update: {
-        organizationId: empty(d.organizationId),
-        opportunityTitle: empty(d.opportunityTitle),
+        coverLetter: empty(d.coverLetter),
         applicantFullName: d.applicantFullName.trim(),
         applicantPhone: empty(d.applicantPhone),
         cvUrl: empty(d.cvUrl),
         linkedinUrl: empty(d.linkedinUrl),
         portfolioUrl: empty(d.portfolioUrl),
-        coverLetter: empty(d.coverLetter),
       },
     });
-    return NextResponse.json({
-      ok: true,
-      id: row.id,
-      table: "InternalListingApplication",
-    });
+    return NextResponse.json({ ok: true, id: app.id, table: "Application" });
   } catch (e) {
     console.error(e);
     return NextResponse.json(

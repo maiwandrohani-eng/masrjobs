@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
-import { SAMPLE_OPPORTUNITIES } from "@/lib/sample-data";
+import { loadSitemapOpportunityRefs } from "@/lib/db/catalog-queries";
+import { getPrisma } from "@/lib/prisma";
+import { RESOURCE_ARTICLES } from "@/lib/resources-articles";
 import { siteUrl } from "@/lib/site-url";
 
 const staticPaths = [
@@ -15,7 +17,7 @@ const staticPaths = [
   "/register",
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrl();
   const lastModified = new Date();
 
@@ -26,12 +28,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: path === "" ? 1 : path === "/opportunities" ? 0.9 : 0.6,
   }));
 
-  for (const o of SAMPLE_OPPORTUNITIES) {
+  const prisma = getPrisma();
+  if (prisma) {
+    const refs = await loadSitemapOpportunityRefs(prisma);
+    for (const r of refs) {
+      const seg = r.slug ?? r.id;
+      entries.push({
+        url: `${base}/opportunities/${seg}`,
+        lastModified,
+        changeFrequency: "weekly",
+        priority: 0.7,
+      });
+    }
+  }
+
+  for (const a of RESOURCE_ARTICLES) {
     entries.push({
-      url: `${base}/opportunities/${o.id}`,
+      url: `${base}/resources/${a.slug}`,
       lastModified,
-      changeFrequency: "weekly",
-      priority: 0.7,
+      changeFrequency: "monthly",
+      priority: 0.65,
     });
   }
 

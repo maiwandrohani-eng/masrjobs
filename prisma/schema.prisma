@@ -132,6 +132,7 @@ model Organization {
 
   users         User[]
   opportunities Opportunity[]
+  notifications Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -152,6 +153,9 @@ model Category {
 
 model Opportunity {
   id String @id @default(cuid())
+
+  /** Optional public slug for SEO URLs; falls back to `id` when absent. */
+  slug String? @unique
 
   title            String
   description      String
@@ -183,6 +187,7 @@ model Opportunity {
   applications Application[]
   savedBy      SavedOpportunity[]
   featured     FeaturedOpportunity?
+  notifications Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -252,6 +257,12 @@ model Notification {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  opportunityId String?
+  opportunity    Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+
   title   String
   message String
   href    String?
@@ -260,6 +271,8 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, readAt])
+  @@index([organizationId])
+  @@index([opportunityId])
 }
 
 model FeaturedOpportunity {
@@ -272,30 +285,6 @@ model FeaturedOpportunity {
   createdAt DateTime @default(now())
 
   @@index([rank])
-}
-
-/** MasrJobs.org internal applications keyed by public listing id (e.g. opp-1 or org-submitted id). */
-model InternalListingApplication {
-  id String @id @default(cuid())
-
-  listingId          String
-  organizationId     String?
-  opportunityTitle   String?
-  applicantEmail     String
-  applicantFullName  String
-  applicantPhone     String?
-  cvUrl              String?
-  linkedinUrl        String?
-  portfolioUrl       String?
-  coverLetter        String?
-  status             ApplicationStatus @default(SUBMITTED)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([listingId, applicantEmail])
-  @@index([listingId])
-  @@index([applicantEmail])
 }
 
 model ExternalApplyIntent {

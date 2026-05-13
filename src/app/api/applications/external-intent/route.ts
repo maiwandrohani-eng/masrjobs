@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
 import { z } from "zod";
+import { authOptions } from "@/lib/auth-options";
 import { getPrisma } from "@/lib/prisma";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   listingId: z.string().min(1),
-  applicantEmail: z.string().email(),
   channel: z.enum(["EMAIL", "EXTERNAL_LINK"]),
 });
 
@@ -16,6 +17,17 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { ok: false, error: "Too many requests", retryAfter: rl.retryAfter },
       { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || !session.user.email) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  if (session.user.role !== "INDIVIDUAL") {
+    return NextResponse.json(
+      { ok: false, error: "Only individual applicant accounts can record external apply intent." },
+      { status: 403 },
     );
   }
 
@@ -48,18 +60,31 @@ export async function POST(req: Request) {
       ? ("EMAIL" as const)
       : ("EXTERNAL_LINK" as const);
 
+  const applicantEmail = session.user.email.trim().toLowerCase();
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, isActive: true, role: true, email: true },
+  });
+  if (!user?.isActive || user.role !== "INDIVIDUAL") {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  if (user.email.trim().toLowerCase() !== applicantEmail) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const row = await prisma.externalApplyIntent.upsert({
       where: {
         listingId_applicantEmail_channel: {
           listingId: d.listingId,
-          applicantEmail: d.applicantEmail.trim().toLowerCase(),
+          applicantEmail,
           channel,
         },
       },
       create: {
         listingId: d.listingId,
-        applicantEmail: d.applicantEmail.trim().toLowerCase(),
+        applicantEmail,
         channel,
       },
       update: {},

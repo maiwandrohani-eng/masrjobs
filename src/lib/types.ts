@@ -35,6 +35,8 @@ export type OpportunityApplicationMethod = "internal" | "email" | "external";
 
 export interface Opportunity {
   id: string;
+  /** Public URL segment when present (Neon); links use slug ?? id. */
+  slug?: string;
   title: string;
   organizationId: string;
   organizationName: string;

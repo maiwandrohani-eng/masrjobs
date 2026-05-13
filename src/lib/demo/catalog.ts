@@ -1,9 +1,13 @@
+/**
+ * Demo-only catalog fixtures. Loaded at runtime only when NEXT_PUBLIC_ENABLE_DEMO_AUTH === "true".
+ * Production catalog comes from Neon via /api/catalog.
+ */
 import type {
   Opportunity,
   Organization,
   PendingOrgRecord,
   PendingOppApproval,
-} from "./types";
+} from "@/lib/types";
 
 export const SAMPLE_ORGANIZATIONS: Organization[] = [
   {

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
 import { isDemoAuthEnabled } from "@/lib/demo-auth";
-import { SAMPLE_ORGANIZATIONS } from "@/lib/sample-data";
+import { SAMPLE_ORGANIZATIONS } from "@/lib/demo/catalog";
 import type { PendingOrgRecord, SessionUser, UserRole } from "@/lib/types";
 
 function today() {

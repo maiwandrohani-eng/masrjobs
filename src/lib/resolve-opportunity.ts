@@ -1,12 +1,11 @@
-import { SAMPLE_OPPORTUNITIES } from "@/lib/sample-data";
 import type { Opportunity } from "@/lib/types";
 
+/** Resolve an opportunity from org-submitted extras first, then catalog (Neon or demo). */
 export function resolveOpportunity(
   id: string,
-  extra: Opportunity[],
+  extras: Opportunity[],
+  catalog: Opportunity[],
 ): Opportunity | undefined {
-  return (
-    extra.find((o) => o.id === id) ??
-    SAMPLE_OPPORTUNITIES.find((o) => o.id === id)
-  );
+  const bySlugOrId = (o: Opportunity) => o.id === id || o.slug === id;
+  return extras.find(bySlugOrId) ?? catalog.find(bySlugOrId);
 }

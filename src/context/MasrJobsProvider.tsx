@@ -14,7 +14,7 @@ import {
   SAMPLE_ORGANIZATIONS,
   SAMPLE_PENDING_OPPORTUNITIES,
   SAMPLE_PENDING_ORGS,
-} from "@/lib/sample-data";
+} from "@/lib/demo/catalog";
 import { buildOpportunityFromSubmission } from "@/lib/build-submitted-opportunity";
 import { resolveOpportunity } from "@/lib/resolve-opportunity";
 import {
@@ -33,6 +33,7 @@ import type {
   ListingStatus,
   MasrJobsNotification,
   Opportunity,
+  Organization,
   OrgListingRecord,
   OrgOpportunitySubmissionInput,
   PendingOppApproval,
@@ -56,10 +57,6 @@ const STORAGE = {
   suppressedCatalogIds: "masrjobs:v1:suppressedCatalogIds",
   externalApplyIntents: "masrjobs:v1:externalApplyIntents",
 } as const;
-
-const VERIFIED_ORG_IDS = new Set(
-  SAMPLE_ORGANIZATIONS.filter((o) => o.verified).map((o) => o.id),
-);
 
 function normEmail(e: string) {
   return e.trim().toLowerCase();
@@ -114,6 +111,8 @@ type MasrJobsContextValue = {
   hydrated: boolean;
 
   opportunities: Opportunity[];
+  /** Directory organizations (Neon) or demo fixtures. */
+  organizations: Organization[];
   getOpportunityById: (id: string) => Opportunity | undefined;
   savedIds: Set<string>;
   toggleSave: (opportunityId: string) => void;
@@ -177,13 +176,15 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [orgListings, setOrgListings] = useState<OrgListingRecord[]>(
-    buildInitialOrgListings,
+    () => (isDemoAuthEnabled() ? buildInitialOrgListings() : []),
   );
   const [pendingOrganizations, setPendingOrganizations] = useState<
     PendingOrgRecord[]
-  >(() => [...SAMPLE_PENDING_ORGS]);
+  >(() => (isDemoAuthEnabled() ? [...SAMPLE_PENDING_ORGS] : []));
   const [pendingOpportunityApprovals, setPendingOpportunityApprovals] =
-    useState<PendingOppApproval[]>(() => [...SAMPLE_PENDING_OPPORTUNITIES]);
+    useState<PendingOppApproval[]>(() =>
+      isDemoAuthEnabled() ? [...SAMPLE_PENDING_OPPORTUNITIES] : [],
+    );
   const [extraOpportunities, setExtraOpportunities] = useState<Opportunity[]>(
     [],
   );
@@ -202,6 +203,56 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   const [externalApplyIntents, setExternalApplyIntents] = useState<
     ExternalApplyIntentRecord[]
   >([]);
+
+  const [neonCatalog, setNeonCatalog] = useState<{
+    opportunities: Opportunity[];
+    organizations: Organization[];
+  } | null>(null);
+
+  const demoMode = isDemoAuthEnabled();
+
+  const catalogOpportunities = useMemo(
+    () => (demoMode ? SAMPLE_OPPORTUNITIES : neonCatalog?.opportunities ?? []),
+    [demoMode, neonCatalog],
+  );
+
+  const catalogOrganizations = useMemo(
+    () => (demoMode ? SAMPLE_ORGANIZATIONS : neonCatalog?.organizations ?? []),
+    [demoMode, neonCatalog],
+  );
+
+  const verifiedOrgIds = useMemo(
+    () =>
+      new Set(
+        catalogOrganizations.filter((o) => o.verified).map((o) => o.id),
+      ),
+    [catalogOrganizations],
+  );
+
+  const refreshNeonCatalog = useCallback(() => {
+    if (demoMode) return;
+    void fetch("/api/catalog")
+      .then((r) => r.json())
+      .then(
+        (d: {
+          opportunities?: Opportunity[];
+          organizations?: Organization[];
+        }) => {
+          setNeonCatalog({
+            opportunities: d.opportunities ?? [],
+            organizations: d.organizations ?? [],
+          });
+        },
+      )
+      .catch(() => {
+        setNeonCatalog({ opportunities: [], organizations: [] });
+      });
+  }, [demoMode]);
+
+  useEffect(() => {
+    if (demoMode) return;
+    refreshNeonCatalog();
+  }, [demoMode, refreshNeonCatalog]);
 
   const pushNotification = useCallback((n: Omit<MasrJobsNotification, "id">) => {
     const full: MasrJobsNotification = {
@@ -228,16 +279,20 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
     const demo = isDemoAuthEnabled();
     if (demo) {
       setDemoSession(loadJson<SessionUser | null>(STORAGE.session, null));
+      const savedArr = loadJson<string[]>(STORAGE.saved, []);
+      setSavedIds(new Set(savedArr));
     }
-    const savedArr = loadJson<string[]>(STORAGE.saved, []);
-    setSavedIds(new Set(savedArr));
     const rawExtra = loadJson<Opportunity[]>(STORAGE.extraOpps, []);
     setExtraOpportunities(rawExtra);
     const rawApps = loadJson<ApplicationRecord[]>(STORAGE.applications, []);
     setApplications(
       rawApps.map((a) => {
         if (a.organizationId) return a;
-        const opp = resolveOpportunity(a.opportunityId, rawExtra);
+        const opp = resolveOpportunity(
+          a.opportunityId,
+          rawExtra,
+          demo ? SAMPLE_OPPORTUNITIES : [],
+        );
         return {
           ...a,
           organizationId: opp?.organizationId ?? "",
@@ -308,9 +363,18 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   }, [demoSession, hydrated]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !demoMode) return;
     localStorage.setItem(STORAGE.saved, JSON.stringify([...savedIds]));
-  }, [savedIds, hydrated]);
+  }, [savedIds, hydrated, demoMode]);
+
+  useEffect(() => {
+    if (demoMode || !hydrated || session?.role !== "individual") return;
+    void fetch("/api/me/saved-opportunities")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { opportunityIds?: string[] } | null) => {
+        if (d?.opportunityIds) setSavedIds(new Set(d.opportunityIds));
+      });
+  }, [demoMode, hydrated, session?.role, session?.email]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -389,9 +453,9 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   const organizationCanPost = useMemo(() => {
     if (!session || session.role !== "organization") return false;
     const id = session.organizationId;
-    if (id && VERIFIED_ORG_IDS.has(id)) return true;
+    if (id && verifiedOrgIds.has(id)) return true;
     return approvedOrgEmails.includes(normEmail(session.email));
-  }, [session, approvedOrgEmails]);
+  }, [session, approvedOrgEmails, verifiedOrgIds]);
 
   const visibleNotifications = useMemo(() => {
     return notifications.filter((n) => notificationVisibleForSession(n, session));
@@ -471,14 +535,36 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
     );
   }, [session]);
 
-  const toggleSave = useCallback((opportunityId: string) => {
-    setSavedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(opportunityId)) next.delete(opportunityId);
-      else next.add(opportunityId);
-      return next;
-    });
-  }, []);
+  const toggleSave = useCallback(
+    (opportunityId: string) => {
+      if (!demoMode) {
+        if (session?.role !== "individual") return;
+        const save = !savedIds.has(opportunityId);
+        void fetch("/api/me/saved-opportunities", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ opportunityId, save }),
+        }).then((res) => {
+          if (res.ok) {
+            setSavedIds((prev) => {
+              const next = new Set(prev);
+              if (save) next.add(opportunityId);
+              else next.delete(opportunityId);
+              return next;
+            });
+          }
+        });
+        return;
+      }
+      setSavedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(opportunityId)) next.delete(opportunityId);
+        else next.add(opportunityId);
+        return next;
+      });
+    },
+    [demoMode, session?.role, savedIds],
+  );
 
   const isSaved = useCallback(
     (opportunityId: string) => savedIds.has(opportunityId),
@@ -487,22 +573,24 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
 
   const publishedOpportunities = useMemo(() => {
     const suppressed = new Set(suppressedCatalogIds);
-    return [
-      ...SAMPLE_OPPORTUNITIES.filter(
-        (o) => isPublishedCatalogOpportunity(o) && !suppressed.has(o.id),
-      ),
-      ...extraOpportunities.filter(isPublishedCatalogOpportunity),
-    ];
-  }, [extraOpportunities, suppressedCatalogIds]);
+    const fromCatalog = catalogOpportunities.filter(
+      (o) => isPublishedCatalogOpportunity(o) && !suppressed.has(o.id),
+    );
+    const fromExtras = extraOpportunities.filter(isPublishedCatalogOpportunity);
+    const byId = new Map<string, Opportunity>();
+    for (const o of fromCatalog) byId.set(o.id, o);
+    for (const o of fromExtras) byId.set(o.id, o);
+    return [...byId.values()];
+  }, [catalogOpportunities, extraOpportunities, suppressedCatalogIds]);
 
   const getOpportunityById = useCallback(
-    (id: string) => resolveOpportunity(id, extraOpportunities),
-    [extraOpportunities],
+    (id: string) => resolveOpportunity(id, extraOpportunities, catalogOpportunities),
+    [extraOpportunities, catalogOpportunities],
   );
 
   const applyToOpportunity = useCallback(
     async (opportunityId: string, payload: InternalApplyPayload) => {
-      const opp = resolveOpportunity(opportunityId, extraOpportunities);
+      const opp = resolveOpportunity(opportunityId, extraOpportunities, catalogOpportunities);
       if (!opp) return { ok: false, message: "Opportunity not found." };
       if (getOpportunityApplicationMethod(opp) !== "internal") {
         return {
@@ -510,7 +598,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
           message: "This listing does not accept applications through MasrJobs.org.",
         };
       }
-      if (suppressedCatalogIds.includes(opportunityId)) {
+      if (suppressedCatalogIds.includes(opp.id)) {
         return {
           ok: false,
           message:
@@ -554,7 +642,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       const cvUrl = applicantProfile.cvUrl.trim();
       const me = normEmail(session.email);
       const already = applications.some((a) => {
-        if (a.opportunityId !== opportunityId) return false;
+        if (a.opportunityId !== opp.id) return false;
         if (!a.applicantEmail) return false;
         return normEmail(a.applicantEmail) === me;
       });
@@ -566,12 +654,12 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       try {
         const res = await fetch("/api/applications/internal", {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            listingId: opportunityId,
+            listingId: opp.id,
             organizationId: opp.organizationId,
             opportunityTitle: opp.title,
-            applicantEmail: session.email,
             applicantFullName: payload.fullName.trim(),
             applicantPhone,
             cvUrl,
@@ -590,7 +678,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
 
       const rec: ApplicationRecord = {
         id: `app-${Date.now()}`,
-        opportunityId,
+        opportunityId: opp.id,
         opportunityTitle: opp.title,
         organizationName: opp.organizationName,
         organizationId: opp.organizationId,
@@ -610,7 +698,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       setApplications((prev) => [...prev, rec]);
       setOrgListings((prev) =>
         prev.map((row) =>
-          row.opportunityId === opportunityId
+          row.opportunityId === opp.id
             ? { ...row, applicantCount: row.applicantCount + 1 }
             : row,
         ),
@@ -636,6 +724,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       session,
       applications,
       extraOpportunities,
+      catalogOpportunities,
       applicantProfile,
       pushNotification,
       suppressedCatalogIds,
@@ -644,7 +733,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
 
   const recordExternalApplyIntent = useCallback(
     async (opportunityId: string, channel: "email" | "external_link") => {
-      const opp = resolveOpportunity(opportunityId, extraOpportunities);
+      const opp = resolveOpportunity(opportunityId, extraOpportunities, catalogOpportunities);
       if (!opp) return { ok: false, message: "Opportunity not found." };
       if (!session || session.role !== "individual") {
         return {
@@ -655,7 +744,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       const me = normEmail(session.email);
       const exists = externalApplyIntents.some(
         (x) =>
-          x.opportunityId === opportunityId &&
+          x.opportunityId === opp.id &&
           normEmail(x.applicantEmail) === me &&
           x.channel === channel,
       );
@@ -668,10 +757,10 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       try {
         await fetch("/api/applications/external-intent", {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            listingId: opportunityId,
-            applicantEmail: session.email,
+            listingId: opp.id,
             channel: channel === "email" ? "EMAIL" : "EXTERNAL_LINK",
           }),
         });
@@ -680,7 +769,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       }
       const row: ExternalApplyIntentRecord = {
         id: `ext-${Date.now()}`,
-        opportunityId,
+        opportunityId: opp.id,
         opportunityTitle: opp.title,
         organizationName: opp.organizationName,
         applicantEmail: session.email,
@@ -690,14 +779,14 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       setExternalApplyIntents((prev) => [row, ...prev]);
       setOrgListings((prev) =>
         prev.map((r) =>
-          r.opportunityId === opportunityId
+          r.opportunityId === opp.id
             ? { ...r, applicantCount: r.applicantCount + 1 }
             : r,
         ),
       );
       return { ok: true, message: "Recorded — see your applicant dashboard." };
     },
-    [session, externalApplyIntents, extraOpportunities],
+    [session, externalApplyIntents, extraOpportunities, catalogOpportunities],
   );
 
   const submitOrgOpportunity = useCallback(
@@ -908,27 +997,44 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const adminCloseOpportunity = useCallback((opportunityId: string) => {
-    const inSample = SAMPLE_OPPORTUNITIES.some((o) => o.id === opportunityId);
-    if (inSample) {
-      setSuppressedCatalogIds((prev) =>
-        prev.includes(opportunityId) ? prev : [...prev, opportunityId],
-      );
-    } else {
-      setExtraOpportunities((extras) =>
-        extras.map((o) =>
-          o.id === opportunityId ? { ...o, visibility: "closed" as const } : o,
+  const adminCloseOpportunity = useCallback(
+    async (opportunityId: string) => {
+      const inDemoCatalog =
+        demoMode && SAMPLE_OPPORTUNITIES.some((o) => o.id === opportunityId);
+      const inNeonCatalog =
+        !demoMode && catalogOpportunities.some((o) => o.id === opportunityId);
+      if (inDemoCatalog) {
+        setSuppressedCatalogIds((prev) =>
+          prev.includes(opportunityId) ? prev : [...prev, opportunityId],
+        );
+      } else if (inNeonCatalog) {
+        try {
+          const res = await fetch("/api/admin/opportunities/close", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ opportunityId }),
+          });
+          if (res.ok) refreshNeonCatalog();
+        } catch {
+          /* ignore */
+        }
+      } else {
+        setExtraOpportunities((extras) =>
+          extras.map((o) =>
+            o.id === opportunityId ? { ...o, visibility: "closed" as const } : o,
+          ),
+        );
+      }
+      setOrgListings((listings) =>
+        listings.map((l) =>
+          l.opportunityId === opportunityId
+            ? { ...l, status: "Closed" as ListingStatus }
+            : l,
         ),
       );
-    }
-    setOrgListings((listings) =>
-      listings.map((l) =>
-        l.opportunityId === opportunityId
-          ? { ...l, status: "Closed" as ListingStatus }
-          : l,
-      ),
-    );
-  }, []);
+    },
+    [demoMode, catalogOpportunities, refreshNeonCatalog],
+  );
 
   const toggleOpportunityFeatured = useCallback((opportunityId: string) => {
     setExtraOpportunities((extras) =>
@@ -967,9 +1073,17 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   );
 
   const closeOwnPublishedListing = useCallback(
-    (opportunityId: string) => {
+    async (opportunityId: string) => {
       if (!session || session.role !== "organization") return;
-      const inSample = SAMPLE_OPPORTUNITIES.some((o) => o.id === opportunityId);
+      const inDemoCatalog =
+        demoMode && SAMPLE_OPPORTUNITIES.some((o) => o.id === opportunityId);
+      const neonOwn =
+        !demoMode &&
+        catalogOpportunities.some(
+          (o) =>
+            o.id === opportunityId &&
+            o.organizationId === session.organizationId,
+        );
       setOrgListings((listings) => {
         const row = listings.find(
           (l) =>
@@ -984,10 +1098,21 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
             : l,
         );
       });
-      if (inSample) {
+      if (inDemoCatalog) {
         setSuppressedCatalogIds((prev) =>
           prev.includes(opportunityId) ? prev : [...prev, opportunityId],
         );
+      } else if (neonOwn) {
+        try {
+          const res = await fetch("/api/organization/opportunities/close", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ opportunityId }),
+          });
+          if (res.ok) refreshNeonCatalog();
+        } catch {
+          /* ignore */
+        }
       } else {
         setExtraOpportunities((extras) =>
           extras.map((o) =>
@@ -999,7 +1124,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
         );
       }
     },
-    [session],
+    [session, demoMode, catalogOpportunities, refreshNeonCatalog],
   );
 
   const value = useMemo<MasrJobsContextValue>(
@@ -1009,6 +1134,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       logout,
       hydrated,
       opportunities: publishedOpportunities,
+      organizations: catalogOrganizations,
       getOpportunityById,
       savedIds,
       toggleSave,
@@ -1049,6 +1175,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       logout,
       hydrated,
       publishedOpportunities,
+      catalogOrganizations,
       getOpportunityById,
       savedIds,
       toggleSave,

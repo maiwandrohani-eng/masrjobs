@@ -10,6 +10,7 @@ import { useMasrJobs } from "@/context/MasrJobsProvider";
 export function OpportunityListRow({ opportunity }: { opportunity: Opportunity }) {
   const { toggleSave, isSaved, hydrated } = useMasrJobs();
   const saved = hydrated && isSaved(opportunity.id);
+  const detailPath = opportunity.slug ?? opportunity.id;
 
   return (
     <article className="flex flex-col gap-3 rounded-xl border border-brand-border bg-white px-4 py-3 shadow-sm transition-colors hover:border-brand-gold/40 sm:flex-row sm:items-stretch sm:justify-between sm:gap-4 sm:py-4">
@@ -19,7 +20,7 @@ export function OpportunityListRow({ opportunity }: { opportunity: Opportunity }
         </p>
         <h2 className="mt-0.5 text-base font-bold text-brand-navy">
           <Link
-            href={`/opportunities/${opportunity.id}`}
+            href={`/opportunities/${detailPath}`}
             className="hover:text-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/45 focus-visible:ring-offset-2 rounded-sm"
           >
             {opportunity.title}
@@ -61,7 +62,7 @@ export function OpportunityListRow({ opportunity }: { opportunity: Opportunity }
           <Bookmark className={cn("h-5 w-5", saved && "fill-brand-gold")} aria-hidden />
         </button>
         <Link
-          href={`/opportunities/${opportunity.id}`}
+          href={`/opportunities/${detailPath}`}
           className="inline-flex min-h-[2.75rem] items-center justify-center rounded-lg bg-brand-navy px-4 py-2 text-xs font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:min-h-0"
         >
           View details

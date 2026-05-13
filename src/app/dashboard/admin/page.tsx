@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { PageIntro, PageShell } from "@/components/PageShell";
 import { ListingStatusBadge } from "@/components/StatusBadge";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
-import { SAMPLE_ORGANIZATIONS } from "@/lib/sample-data";
 import type { OpportunityCategory } from "@/lib/types";
 
 const CATEGORY_PRESETS: OpportunityCategory[] = [
@@ -30,6 +29,7 @@ export default function AdminDashboardPage() {
     hydrated,
     applications,
     opportunities,
+    organizations,
     orgListings,
     orgSubmittedOpportunities,
     pendingOrganizations,
@@ -122,7 +122,7 @@ export default function AdminDashboardPage() {
     { label: "Total users (demo baseline + registrations)", value: String(totalUsersDisplay) },
     {
       label: "Organizations in directory",
-      value: String(SAMPLE_ORGANIZATIONS.length),
+      value: String(organizations.length),
     },
     {
       label: "Pending organization accounts",

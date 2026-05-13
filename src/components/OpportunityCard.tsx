@@ -10,6 +10,7 @@ import { useMasrJobs } from "@/context/MasrJobsProvider";
 export function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
   const { toggleSave, isSaved, hydrated } = useMasrJobs();
   const saved = hydrated && isSaved(opportunity.id);
+  const detailPath = opportunity.slug ?? opportunity.id;
 
   return (
     <article className="flex h-full flex-col rounded-2xl border border-brand-border bg-white p-5 shadow-sm transition-all hover:border-brand-gold/45 hover:shadow-md">
@@ -20,7 +21,7 @@ export function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
           </p>
           <h2 className="mt-1 text-lg font-bold text-brand-navy">
             <Link
-              href={`/opportunities/${opportunity.id}`}
+              href={`/opportunities/${detailPath}`}
               className="rounded-sm hover:text-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/45 focus-visible:ring-offset-2"
             >
               {opportunity.title}
@@ -71,7 +72,7 @@ export function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
 
       <div className="mt-5 flex flex-wrap gap-2">
         <Link
-          href={`/opportunities/${opportunity.id}`}
+          href={`/opportunities/${detailPath}`}
           className="inline-flex flex-1 items-center justify-center rounded-lg bg-brand-navy px-4 py-2.5 text-sm font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:flex-none"
         >
           View details

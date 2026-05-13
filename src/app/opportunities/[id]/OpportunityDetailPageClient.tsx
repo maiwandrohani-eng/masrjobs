@@ -12,6 +12,8 @@ import {
   getOpportunityApplicationMethod,
 } from "@/lib/opportunity-apply";
 
+import type { Opportunity } from "@/lib/types";
+
 function formatDeadline(iso: string) {
   return new Date(iso + "T12:00:00").toLocaleDateString("en-GB", {
     day: "numeric",
@@ -20,13 +22,26 @@ function formatDeadline(iso: string) {
   });
 }
 
-export default function OpportunityDetailPageClient() {
+type Props = {
+  /** From Neon when DATABASE_URL is set; `null` means not in DB; `undefined` means server skipped DB. */
+  initialOpportunity?: Opportunity | null;
+  pathParam: string;
+};
+
+export default function OpportunityDetailPageClient({
+  initialOpportunity,
+  pathParam,
+}: Props) {
   const params = useParams();
-  const id = typeof params?.id === "string" ? params.id : "";
+  const raw = typeof params?.id === "string" ? params.id : pathParam;
   const { getOpportunityById, hydrated, session, suppressedCatalogIds } =
     useMasrJobs();
 
-  if (!hydrated) {
+  const waitingHydration =
+    (initialOpportunity === undefined && !hydrated) ||
+    (initialOpportunity === null && !hydrated);
+
+  if (waitingHydration) {
     return (
       <div className="min-h-[40vh] bg-background">
         <PageShell>
@@ -36,8 +51,12 @@ export default function OpportunityDetailPageClient() {
     );
   }
 
-  const opportunity = getOpportunityById(id);
-  if (!opportunity) {
+  const resolved =
+    initialOpportunity !== undefined && initialOpportunity !== null
+      ? initialOpportunity
+      : getOpportunityById(raw);
+
+  if (!resolved) {
     return (
       <div className="min-h-[40vh] bg-background">
         <PageShell>
@@ -55,6 +74,8 @@ export default function OpportunityDetailPageClient() {
       </div>
     );
   }
+
+  const opportunity = resolved;
 
   const canView = canUserViewOpportunityDetail(session, opportunity, {
     suppressedCatalogIds,

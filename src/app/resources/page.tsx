@@ -1,33 +1,9 @@
 import Link from "next/link";
 import { PageIntro, PageShell } from "@/components/PageShell";
 import { ResourcesArticles } from "@/components/ResourcesArticles";
+import { resourceArticleSummaries } from "@/lib/resources-articles";
 
-const articles = [
-  {
-    title: "How to read a TOR like a hiring manager",
-    excerpt:
-      "Terms of reference hide clues about evaluation criteria, reporting lines, and what “success” really means.",
-    category: "Hiring",
-  },
-  {
-    title: "CVs for NGOs vs. private sector",
-    excerpt:
-      "Lead with mission alignment, programme scale, and measurable impact — then layer technical skills.",
-    category: "Careers",
-  },
-  {
-    title: "Safeguarding basics every applicant should know",
-    excerpt:
-      "Understand PSEA, referral pathways, and why recruiters ask behavioural questions in screenings.",
-    category: "Safeguarding",
-  },
-  {
-    title: "Remote and hybrid roles in Egypt’s development space",
-    excerpt:
-      "How to demonstrate async collaboration, data security, and field connectivity when working hybrid.",
-    category: "Work formats",
-  },
-];
+const articles = resourceArticleSummaries();
 
 export default function ResourcesPage() {
   return (
