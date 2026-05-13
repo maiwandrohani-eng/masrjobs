@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useLayoutEffect } from "react";
 import { Award, BadgeCheck, MapPin } from "lucide-react";
 import type { Organization } from "@/lib/types";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
@@ -12,16 +13,73 @@ function orgAnchorId(organizationId: string) {
   return `org-${organizationId}`;
 }
 
+function scrollToOrgAnchor(anchorId: string): boolean {
+  if (typeof document === "undefined") return false;
+  const el = document.getElementById(anchorId);
+  if (!el) return false;
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  return true;
+}
+
+/** Next.js client navigation to the same pathname often skips hash scroll; handle explicitly. */
+function OrgProfileLink({
+  orgId,
+  className,
+  children,
+}: {
+  orgId: string;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const anchorId = orgAnchorId(orgId);
+  const href = `/organizations#${anchorId}`;
+
+  const onClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const onDirectory =
+      pathname === "/organizations" || pathname?.replace(/\/$/, "") === "/organizations";
+    if (!onDirectory) return;
+    e.preventDefault();
+    window.history.replaceState(null, "", `#${anchorId}`);
+    const tryScroll = () => scrollToOrgAnchor(anchorId);
+    tryScroll();
+    requestAnimationFrame(tryScroll);
+    queueMicrotask(() => {
+      tryScroll();
+      setTimeout(tryScroll, 50);
+    });
+  };
+
+  return (
+    <Link href={href} scroll={false} onClick={onClick} className={className}>
+      {children}
+    </Link>
+  );
+}
+
 export function OrganizationsDirectory({ organizations }: { organizations: Organization[] }) {
   const { mode, setMode } = usePersistedViewMode("masrjobs:v1:viewOrganizationsDirectory");
 
-  useEffect(() => {
+  const scrollFromLocationHash = useCallback(() => {
     if (typeof window === "undefined" || organizations.length === 0) return;
     const raw = window.location.hash.replace(/^#/, "");
     if (!raw.startsWith("org-")) return;
-    const el = document.getElementById(raw);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    const tryScroll = () => scrollToOrgAnchor(raw);
+    tryScroll();
+    requestAnimationFrame(tryScroll);
+    setTimeout(tryScroll, 0);
+    setTimeout(tryScroll, 80);
   }, [organizations]);
+
+  useLayoutEffect(() => {
+    scrollFromLocationHash();
+  }, [scrollFromLocationHash]);
+
+  useEffect(() => {
+    const onHashChange = () => scrollFromLocationHash();
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [scrollFromLocationHash]);
 
   return (
     <div>
@@ -81,12 +139,12 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
                 {org.description}
               </p>
               <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                <Link
-                  href={`/organizations#${orgAnchorId(org.id)}`}
+                <OrgProfileLink
+                  orgId={org.id}
                   className="inline-flex min-h-[2.75rem] items-center justify-center rounded-lg bg-brand-navy px-4 py-2.5 text-center text-sm font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:min-h-0"
                 >
                   View profile
-                </Link>
+                </OrgProfileLink>
                 <Link
                   href={`/opportunities?orgId=${encodeURIComponent(org.id)}`}
                   className="inline-flex min-h-[2.75rem] items-center justify-center rounded-lg border border-brand-border px-4 py-2.5 text-center text-sm font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:min-h-0"
@@ -148,12 +206,12 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
                 </p>
               </div>
               <div className="mt-3 flex shrink-0 flex-col gap-2 sm:mt-0 sm:items-end">
-                <Link
-                  href={`/organizations#${orgAnchorId(org.id)}`}
+                <OrgProfileLink
+                  orgId={org.id}
                   className="inline-flex min-h-[2.75rem] w-full items-center justify-center rounded-lg bg-brand-navy px-3 py-2 text-xs font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:w-auto sm:min-h-0"
                 >
                   View profile
-                </Link>
+                </OrgProfileLink>
                 <Link
                   href={`/opportunities?orgId=${encodeURIComponent(org.id)}`}
                   className="inline-flex min-h-[2.75rem] w-full items-center justify-center rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:w-auto sm:min-h-0"
