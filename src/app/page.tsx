@@ -37,19 +37,23 @@ export default function Home() {
               </Link>
             </div>
             <ul className="mt-8 flex flex-wrap gap-2 text-xs font-medium text-brand-navy/80">
-              {[
-                "Jobs",
-                "Consultancies",
-                "Trainings",
-                "Volunteering",
-                "Tenders",
-                "Grants",
-              ].map((t) => (
-                <li
-                  key={t}
-                  className="rounded-full border border-brand-border bg-white px-3 py-1.5 shadow-sm"
-                >
-                  {t}
+              {(
+                [
+                  { label: "Jobs", category: "Jobs" },
+                  { label: "Consultancies", category: "Consultancies" },
+                  { label: "Trainings", category: "Trainings" },
+                  { label: "Volunteering", category: "Volunteer Roles" },
+                  { label: "Tenders", category: "Tenders" },
+                  { label: "Grants", category: "Grants" },
+                ] as const
+              ).map(({ label, category }) => (
+                <li key={category}>
+                  <Link
+                    href={`/opportunities?category=${encodeURIComponent(category)}`}
+                    className="inline-block rounded-full border border-brand-border bg-white px-3 py-1.5 shadow-sm transition hover:border-brand-navy/25 hover:bg-brand-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/40"
+                  >
+                    {label}
+                  </Link>
                 </li>
               ))}
             </ul>
