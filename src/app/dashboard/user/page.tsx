@@ -11,7 +11,7 @@ import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
 import { usePersistedViewMode } from "@/hooks/usePersistedViewMode";
 import { isDemoAuthEnabled } from "@/lib/demo-auth";
-import { isPublishedCatalogOpportunity } from "@/lib/opportunity-visibility";
+import { isPublishedCatalogOpportunity, suppressedCatalogIdsForBrowse } from "@/lib/opportunity-visibility";
 import type { ApplicationStatus, Opportunity } from "@/lib/types";
 
 const STATUS_STEPS: ApplicationStatus[] = [
@@ -69,7 +69,7 @@ export default function UserDashboardPage() {
   for (const id of savedIds) {
     const o = getOpportunityById(id);
     if (!o || !isPublishedCatalogOpportunity(o)) continue;
-    if (suppressedCatalogIds.includes(o.id)) continue;
+    if (suppressedCatalogIdsForBrowse(suppressedCatalogIds).includes(o.id)) continue;
     savedList.push(o);
   }
 

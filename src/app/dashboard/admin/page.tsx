@@ -467,8 +467,17 @@ export default function AdminDashboardPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            approveOpportunitySubmission(p.id);
-                            alert("Listing approved — it now appears on the public opportunities page.");
+                            void approveOpportunitySubmission(p.id, p.opportunityId).then((ok) => {
+                              if (ok) {
+                                alert(
+                                  "Listing approved — it now appears on the public opportunities page.",
+                                );
+                              } else {
+                                alert(
+                                  "Approval did not save. Check you are signed in as admin, then retry or inspect the approve request in the browser network tab.",
+                                );
+                              }
+                            });
                           }}
                           className="rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-brand-navy shadow-sm hover:bg-brand-gold-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60"
                         >
@@ -478,8 +487,13 @@ export default function AdminDashboardPage() {
                           type="button"
                           onClick={() => {
                             if (confirm("Reject this submission?")) {
-                              rejectOpportunitySubmission(p.id);
-                              alert("Listing rejected — visible to employer only.");
+                              void rejectOpportunitySubmission(p.id, p.opportunityId).then((ok) => {
+                                if (ok) {
+                                  alert("Listing rejected — visible to employer only.");
+                                } else {
+                                  alert("Reject did not save. Check your connection and try again.");
+                                }
+                              });
                             }
                           }}
                           className="rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50"
@@ -494,7 +508,11 @@ export default function AdminDashboardPage() {
                                 "Delete this submission from the queue? This removes the draft opportunity.",
                               )
                             )
-                              deleteOpportunitySubmission(p.id);
+                              void deleteOpportunitySubmission(p.id, p.opportunityId).then((ok) => {
+                                if (!ok) {
+                                  alert("Delete did not complete. Check your connection and try again.");
+                                }
+                              });
                           }}
                           className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-800"
                         >

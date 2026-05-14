@@ -60,13 +60,19 @@ export function OpportunitiesExplorer({
   );
 
   useEffect(() => {
-    setCategory(categoryFromParam(initialCategory));
+    const id = window.setTimeout(() => {
+      setCategory(categoryFromParam(initialCategory));
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [initialCategory]);
 
   useEffect(() => {
-    const id = initialOrganizationId.trim();
-    setOrgIdFilter(id);
-    setOrgNameFilter(id ? "" : initialOrganization.trim());
+    const tid = window.setTimeout(() => {
+      const id = initialOrganizationId.trim();
+      setOrgIdFilter(id);
+      setOrgNameFilter(id ? "" : initialOrganization.trim());
+    }, 0);
+    return () => window.clearTimeout(tid);
   }, [initialOrganizationId, initialOrganization]);
 
   const orgOptions = useMemo(() => {

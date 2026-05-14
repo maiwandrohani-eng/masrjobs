@@ -6,7 +6,7 @@ import { OpportunityDetailActions } from "@/components/OpportunityDetailActions"
 import { OpportunityDetailFields } from "@/components/OpportunityDetailFields";
 import { PageShell } from "@/components/PageShell";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
-import { canUserViewOpportunityDetail } from "@/lib/opportunity-visibility";
+import { canUserViewOpportunityDetail, suppressedCatalogIdsForBrowse } from "@/lib/opportunity-visibility";
 import {
   applicationMethodLabel,
   getOpportunityApplicationMethod,
@@ -78,7 +78,7 @@ export default function OpportunityDetailPageClient({
   const opportunity = resolved;
 
   const canView = canUserViewOpportunityDetail(session, opportunity, {
-    suppressedCatalogIds,
+    suppressedCatalogIds: suppressedCatalogIdsForBrowse(suppressedCatalogIds),
   });
 
   if (!canView) {

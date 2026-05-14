@@ -20,6 +20,7 @@ import { resolveOpportunity } from "@/lib/resolve-opportunity";
 import {
   isApplicationOpenForOpportunity,
   isPublishedCatalogOpportunity,
+  suppressedCatalogIdsForBrowse,
 } from "@/lib/opportunity-visibility";
 import { getOpportunityApplicationMethod } from "@/lib/opportunity-apply";
 import { isDemoAuthEnabled } from "@/lib/demo-auth";
@@ -152,9 +153,9 @@ type MasrJobsContextValue = {
   registeredUsers: RegisteredUserSnapshot[];
 
   pendingOpportunityApprovals: PendingOppApproval[];
-  approveOpportunitySubmission: (id: string) => void;
-  rejectOpportunitySubmission: (id: string) => void;
-  deleteOpportunitySubmission: (id: string) => void;
+  approveOpportunitySubmission: (queueId: string, opportunityId?: string) => Promise<boolean>;
+  rejectOpportunitySubmission: (queueId: string, opportunityId?: string) => Promise<boolean>;
+  deleteOpportunitySubmission: (queueId: string, opportunityId?: string) => Promise<boolean>;
   adminCloseOpportunity: (opportunityId: string) => void;
   toggleOpportunityFeatured: (opportunityId: string) => void;
 
@@ -249,7 +250,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
 
   const refreshNeonCatalog = useCallback(() => {
     if (demoMode) return;
-    void fetch("/api/catalog")
+    void fetch("/api/catalog", { cache: "no-store", credentials: "same-origin" })
       .then(async (res) => {
         const d = (await res.json().catch(() => ({}))) as {
           opportunities?: Opportunity[];
@@ -268,6 +269,16 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       .catch((err) => {
         console.warn("[catalog] /api/catalog network error", err);
       });
+  }, [demoMode]);
+
+  const refreshPendingOpportunities = useCallback(() => {
+    if (demoMode) return;
+    void fetch("/api/admin/pending-opportunities", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { items?: PendingOppApproval[] } | null) => {
+        if (d?.items) setPendingOpportunityApprovals(d.items);
+      })
+      .catch(() => {});
   }, [demoMode]);
 
   useEffect(() => {
@@ -332,7 +343,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       const savedArr = loadJson<string[]>(STORAGE.saved, []);
       setSavedIds(new Set(savedArr));
     }
-    const rawExtra = loadJson<Opportunity[]>(STORAGE.extraOpps, []);
+    const rawExtra = demo ? loadJson<Opportunity[]>(STORAGE.extraOpps, []) : [];
     setExtraOpportunities(rawExtra);
     const rawApps = loadJson<ApplicationRecord[]>(STORAGE.applications, []);
     setApplications(
@@ -359,13 +370,15 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       null,
     );
     if (demo && pOrgs?.length) setPendingOrganizations(pOrgs);
-    const pOpps = loadJson<PendingOppApproval[] | null>(
-      STORAGE.pendingOpps,
-      null,
-    );
-    if (pOpps) setPendingOpportunityApprovals(pOpps);
+    if (demo) {
+      const pOpps = loadJson<PendingOppApproval[] | null>(
+        STORAGE.pendingOpps,
+        null,
+      );
+      if (pOpps) setPendingOpportunityApprovals(pOpps);
+    }
     setSuppressedCatalogIds(
-      loadJson<string[]>(STORAGE.suppressedCatalogIds, []),
+      demo ? loadJson<string[]>(STORAGE.suppressedCatalogIds, []) : [],
     );
     setNotifications(loadJson<MasrJobsNotification[]>(STORAGE.notifications, []));
     setApprovedOrgEmails(
@@ -441,6 +454,11 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   }, [hydrated, demoMode, session?.role, session?.email]);
 
   useEffect(() => {
+    if (!hydrated || demoMode || session?.role !== "admin") return;
+    refreshPendingOpportunities();
+  }, [hydrated, demoMode, session?.role, session?.email, refreshPendingOpportunities]);
+
+  useEffect(() => {
     if (!hydrated) return;
     localStorage.setItem(STORAGE.applications, JSON.stringify(applications));
   }, [applications, hydrated]);
@@ -459,20 +477,20 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   }, [pendingOrganizations, hydrated, demoMode]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !demoMode) return;
     localStorage.setItem(
       STORAGE.pendingOpps,
       JSON.stringify(pendingOpportunityApprovals),
     );
-  }, [pendingOpportunityApprovals, hydrated]);
+  }, [pendingOpportunityApprovals, hydrated, demoMode]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !demoMode) return;
     localStorage.setItem(
       STORAGE.extraOpps,
       JSON.stringify(extraOpportunities),
     );
-  }, [extraOpportunities, hydrated]);
+  }, [extraOpportunities, hydrated, demoMode]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -507,7 +525,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   }, [externalApplyIntents, hydrated]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !isDemoAuthEnabled()) return;
     localStorage.setItem(
       STORAGE.suppressedCatalogIds,
       JSON.stringify(suppressedCatalogIds),
@@ -661,7 +679,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   );
 
   const publishedOpportunities = useMemo(() => {
-    const suppressed = new Set(suppressedCatalogIds);
+    const suppressed = new Set(suppressedCatalogIdsForBrowse(suppressedCatalogIds));
     const fromCatalog = catalogOpportunities.filter(
       (o) => isPublishedCatalogOpportunity(o) && !suppressed.has(o.id),
     );
@@ -687,7 +705,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
           message: "This listing does not accept applications through MasrJobs.org.",
         };
       }
-      if (suppressedCatalogIds.includes(opp.id)) {
+      if (suppressedCatalogIdsForBrowse(suppressedCatalogIds).includes(opp.id)) {
         return {
           ok: false,
           message:
@@ -882,6 +900,56 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
     (input: OrgOpportunitySubmissionInput) => {
       if (!session || session.role !== "organization") return;
       if (!organizationCanPost) return;
+
+      if (!demoMode) {
+        void (async () => {
+          try {
+            const res = await fetch("/api/organization/opportunities", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(input),
+            });
+            const data = (await res.json().catch(() => ({}))) as {
+              ok?: boolean;
+              listing?: {
+                opportunityId: string;
+                title: string;
+                category: Opportunity["category"];
+                submittedAt: string;
+              };
+            };
+            if (!res.ok || !data.ok || !data.listing) return;
+            const listing = data.listing;
+            setOrgListings((prev) => [
+              {
+                id: `ol-${listing.opportunityId}`,
+                opportunityId: listing.opportunityId,
+                title: listing.title,
+                category: listing.category,
+                status: "Pending approval",
+                submittedAt: listing.submittedAt,
+                applicantCount: 0,
+                submittedByOrgId: session.organizationId ?? undefined,
+              },
+              ...prev,
+            ]);
+            refreshNeonCatalog();
+            refreshPendingOpportunities();
+            pushNotification({
+              createdAt: new Date().toISOString(),
+              read: false,
+              audience: { kind: "admin" },
+              title: "Listing pending approval",
+              message: `${session.organizationName ?? "An organization"} submitted “${listing.title}”.`,
+            });
+          } catch {
+            /* ignore */
+          }
+        })();
+        return;
+      }
+
       const oppId = `opp-${Date.now()}`;
       const queueId = `popp-q-${Date.now()}`;
       const built = buildOpportunityFromSubmission(session, input, oppId);
@@ -920,7 +988,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
         message: `${built.organizationName} submitted “${built.title}”.`,
       });
     },
-    [session, organizationCanPost, pushNotification],
+    [session, organizationCanPost, pushNotification, demoMode, refreshNeonCatalog, refreshPendingOpportunities],
   );
 
   const approveOrganization = useCallback(
@@ -1017,9 +1085,70 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   );
 
   const approveOpportunitySubmission = useCallback(
-    (id: string) => {
+    (queueId: string, opportunityId?: string): Promise<boolean> => {
+      if (!demoMode) {
+        const oid =
+          opportunityId?.trim() ||
+          (queueId.startsWith("popp-") && !queueId.startsWith("popp-q-")
+            ? queueId.slice("popp-".length)
+            : queueId.trim());
+        if (!oid) return Promise.resolve(false);
+        return (async () => {
+          try {
+            const res = await fetch(
+              `/api/admin/opportunities/${encodeURIComponent(oid)}/approve`,
+              {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+              },
+            );
+            const data = (await res.json().catch(() => ({}))) as {
+              ok?: boolean;
+              title?: string;
+              organizationName?: string;
+              contactEmail?: string | null;
+            };
+            if (!res.ok || !data.ok) return false;
+            setPendingOpportunityApprovals((prev) => prev.filter((p) => p.id !== queueId));
+            setOrgListings((listings) =>
+              listings.map((l) =>
+                l.opportunityId === oid && l.status === "Pending approval"
+                  ? { ...l, status: "Published" as ListingStatus }
+                  : l,
+              ),
+            );
+            refreshPendingOpportunities();
+            refreshNeonCatalog();
+            const em = data.contactEmail?.trim();
+            if (em) {
+              queueMicrotask(() =>
+                pushNotification({
+                  createdAt: new Date().toISOString(),
+                  read: false,
+                  audience: { kind: "org", email: normEmail(em) },
+                  title: "Listing published",
+                  message: `“${data.title ?? "Your listing"}” is now live on the public opportunities page.`,
+                }),
+              );
+              queueMicrotask(() => {
+                postTransactionalEmail("/api/admin/transactional-email", {
+                  kind: "opportunity-approved",
+                  to: em,
+                  opportunityTitle: data.title ?? "Your listing",
+                  organizationName: data.organizationName ?? "Organization",
+                });
+              });
+            }
+            return true;
+          } catch {
+            return false;
+          }
+        })();
+      }
+
       setPendingOpportunityApprovals((prev) => {
-        const item = prev.find((p) => p.id === id);
+        const item = prev.find((p) => p.id === queueId);
         if (!item) return prev;
 
         if (item.opportunityId) {
@@ -1069,16 +1198,76 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
             ),
           );
         }
-        return prev.filter((p) => p.id !== id);
+        return prev.filter((p) => p.id !== queueId);
       });
+      return Promise.resolve(true);
     },
-    [pushNotification],
+    [pushNotification, demoMode, refreshPendingOpportunities, refreshNeonCatalog],
   );
 
   const rejectOpportunitySubmission = useCallback(
-    (id: string) => {
+    (queueId: string, opportunityId?: string): Promise<boolean> => {
+      if (!demoMode) {
+        const oid =
+          opportunityId?.trim() ||
+          (queueId.startsWith("popp-") && !queueId.startsWith("popp-q-")
+            ? queueId.slice("popp-".length)
+            : queueId.trim());
+        if (!oid) return Promise.resolve(false);
+        return (async () => {
+          try {
+            const res = await fetch(
+              `/api/admin/opportunities/${encodeURIComponent(oid)}/reject`,
+              {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+              },
+            );
+            const data = (await res.json().catch(() => ({}))) as {
+              ok?: boolean;
+              title?: string;
+              organizationName?: string;
+              contactEmail?: string | null;
+            };
+            if (!res.ok || !data.ok) return false;
+            setPendingOpportunityApprovals((prev) => prev.filter((p) => p.id !== queueId));
+            setOrgListings((listings) =>
+              listings.map((l) =>
+                l.opportunityId === oid ? { ...l, status: "Rejected" as ListingStatus } : l,
+              ),
+            );
+            refreshPendingOpportunities();
+            refreshNeonCatalog();
+            const em = data.contactEmail?.trim();
+            if (em) {
+              queueMicrotask(() =>
+                pushNotification({
+                  createdAt: new Date().toISOString(),
+                  read: false,
+                  audience: { kind: "org", email: normEmail(em) },
+                  title: "Listing not approved",
+                  message: `“${data.title ?? "Your listing"}” was not approved for public listing.`,
+                }),
+              );
+              queueMicrotask(() => {
+                postTransactionalEmail("/api/admin/transactional-email", {
+                  kind: "opportunity-rejected",
+                  to: em,
+                  opportunityTitle: data.title ?? "Your listing",
+                  organizationName: data.organizationName ?? "Organization",
+                });
+              });
+            }
+            return true;
+          } catch {
+            return false;
+          }
+        })();
+      }
+
       setPendingOpportunityApprovals((prev) => {
-        const row = prev.find((p) => p.id === id);
+        const row = prev.find((p) => p.id === queueId);
         if (!row) return prev;
 
         if (row.opportunityId) {
@@ -1127,16 +1316,45 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
             ),
           );
         }
-        return prev.filter((p) => p.id !== id);
+        return prev.filter((p) => p.id !== queueId);
       });
+      return Promise.resolve(true);
     },
-    [pushNotification],
+    [pushNotification, demoMode, refreshPendingOpportunities, refreshNeonCatalog],
   );
 
   const deleteOpportunitySubmission = useCallback(
-    (id: string) => {
+    (queueId: string, opportunityId?: string): Promise<boolean> => {
+      if (!demoMode) {
+        const oid =
+          opportunityId?.trim() ||
+          (queueId.startsWith("popp-") && !queueId.startsWith("popp-q-")
+            ? queueId.slice("popp-".length)
+            : queueId.trim());
+        if (!oid) return Promise.resolve(false);
+        return (async () => {
+          try {
+            const res = await fetch("/api/admin/opportunities/delete", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ opportunityId: oid }),
+            });
+            const data = (await res.json().catch(() => ({}))) as { ok?: boolean };
+            if (!res.ok || !data.ok) return false;
+            setPendingOpportunityApprovals((prev) => prev.filter((p) => p.id !== queueId));
+            setOrgListings((listings) => listings.filter((l) => l.opportunityId !== oid));
+            refreshPendingOpportunities();
+            refreshNeonCatalog();
+            return true;
+          } catch {
+            return false;
+          }
+        })();
+      }
+
       setPendingOpportunityApprovals((prev) => {
-        const row = prev.find((p) => p.id === id);
+        const row = prev.find((p) => p.id === queueId);
         if (!row) return prev;
         if (row.opportunityId) {
           setExtraOpportunities((extras) =>
@@ -1146,10 +1364,11 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
             listings.filter((l) => l.opportunityId !== row.opportunityId),
           );
         }
-        return prev.filter((p) => p.id !== id);
+        return prev.filter((p) => p.id !== queueId);
       });
+      return Promise.resolve(true);
     },
-    [],
+    [demoMode, refreshPendingOpportunities, refreshNeonCatalog],
   );
 
   const adminCloseOpportunity = useCallback(

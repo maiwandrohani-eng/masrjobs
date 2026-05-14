@@ -12,12 +12,21 @@ export async function GET() {
   }
   try {
     const catalog = await loadPublishedCatalog(prisma);
-    return NextResponse.json(catalog);
+    return NextResponse.json(catalog, {
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+      },
+    });
   } catch (e) {
     console.error(e);
     return NextResponse.json(
       { opportunities: [], organizations: [], error: "CATALOG_QUERY_FAILED" },
-      { status: 500 },
+      {
+        status: 500,
+        headers: {
+          "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+        },
+      },
     );
   }
 }

@@ -6,7 +6,7 @@ import { Bookmark, Mail, ExternalLink } from "lucide-react";
 import type { Opportunity } from "@/lib/types";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
 import { cn } from "@/lib/cn";
-import { isApplicationOpenForOpportunity } from "@/lib/opportunity-visibility";
+import { isApplicationOpenForOpportunity, suppressedCatalogIdsForBrowse } from "@/lib/opportunity-visibility";
 import {
   applicationMethodLabel,
   getExternalApplicationHref,
@@ -50,7 +50,7 @@ export function OpportunityDetailActions({ opportunity }: { opportunity: Opportu
   const saved = hydrated && isSaved(opportunity.id);
   const listingsOpen =
     isApplicationOpenForOpportunity(opportunity) &&
-    !suppressedCatalogIds.includes(opportunity.id);
+    !suppressedCatalogIdsForBrowse(suppressedCatalogIds).includes(opportunity.id);
 
   const method = getOpportunityApplicationMethod(opportunity);
   const extHref = getExternalApplicationHref(opportunity);

@@ -410,6 +410,60 @@ export function AdminNeonRegistryPanel({ disabled }: { disabled: boolean }) {
                           >
                             View
                           </Link>
+                          {o.status === "PENDING_APPROVAL" ? (
+                            <>
+                              <button
+                                type="button"
+                                className={btn}
+                                disabled={!!busyKey}
+                                onClick={() =>
+                                  void runMutation(`p-a-${o.id}`, async () => {
+                                    const { res, data } = await postJson<{ ok?: boolean; error?: string }>(
+                                      `/api/admin/opportunities/${encodeURIComponent(o.id)}/approve`,
+                                      {},
+                                    );
+                                    if (!res.ok || !data.ok) {
+                                      setMessage(
+                                        typeof (data as { error?: unknown }).error === "string"
+                                          ? String((data as { error?: string }).error)
+                                          : "Approve failed.",
+                                      );
+                                      return false;
+                                    }
+                                    return true;
+                                  })
+                                }
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                className={btn}
+                                disabled={!!busyKey}
+                                onClick={() => {
+                                  if (!confirm(`Reject listing “${o.title}”? It will not appear publicly.`))
+                                    return;
+                                  void runMutation(`p-rj-${o.id}`, async () => {
+                                    const { res, data } = await postJson<{ ok?: boolean; error?: string }>(
+                                      `/api/admin/opportunities/${encodeURIComponent(o.id)}/reject`,
+                                      {},
+                                    );
+                                    if (!res.ok || !data.ok) {
+                                      setMessage(
+                                        typeof (data as { error?: unknown }).error === "string"
+                                          ? String((data as { error?: string }).error)
+                                          : "Reject failed.",
+                                      );
+                                      return false;
+                                    }
+                                    return true;
+                                  });
+                                }}
+                              >
+                                Reject
+                              </button>
+                            </>
+                          ) : null}
                           {o.status === "PUBLISHED" || o.status === "PENDING_APPROVAL" ? (
                             <button
                               type="button"

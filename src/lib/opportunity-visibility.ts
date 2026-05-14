@@ -1,4 +1,16 @@
 import type { Opportunity, SessionUser } from "@/lib/types";
+import { isDemoAuthEnabled } from "@/lib/demo-auth";
+
+/**
+ * Demo preview uses localStorage-backed `suppressedCatalogIds` to hide closed sample rows
+ * while keeping them resolvable. Production must rely on Neon status only — never hide
+ * real listing IDs via stale client suppression.
+ */
+export function suppressedCatalogIdsForBrowse(
+  suppressedCatalogIds: readonly string[],
+): readonly string[] {
+  return isDemoAuthEnabled() ? suppressedCatalogIds : [];
+}
 
 /** Shown on public browse / home / filters. */
 export function isPublishedCatalogOpportunity(o: Opportunity): boolean {
