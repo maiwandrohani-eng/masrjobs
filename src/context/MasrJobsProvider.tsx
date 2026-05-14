@@ -296,6 +296,42 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [demoMode]);
 
+  const refreshMyApplications = useCallback(() => {
+    if (demoMode) return;
+    void fetch("/api/me/applications", { credentials: "include", cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { ok?: boolean; applications?: ApplicationRecord[] } | null) => {
+        if (d?.ok && Array.isArray(d.applications)) setApplications(d.applications);
+      })
+      .catch(() => {});
+  }, [demoMode]);
+
+  const refreshMyExternalIntents = useCallback(() => {
+    if (demoMode) return;
+    void fetch("/api/me/external-apply-intents", {
+      credentials: "include",
+      cache: "no-store",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { ok?: boolean; intents?: ExternalApplyIntentRecord[] } | null) => {
+        if (d?.ok && Array.isArray(d.intents)) setExternalApplyIntents(d.intents);
+      })
+      .catch(() => {});
+  }, [demoMode]);
+
+  const refreshOrgApplicationsFromNeon = useCallback(() => {
+    if (demoMode) return;
+    void fetch("/api/organization/applications", {
+      credentials: "include",
+      cache: "no-store",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { ok?: boolean; applications?: ApplicationRecord[] } | null) => {
+        if (d?.ok && Array.isArray(d.applications)) setApplications(d.applications);
+      })
+      .catch(() => {});
+  }, [demoMode]);
+
   useEffect(() => {
     if (demoMode) return;
     refreshNeonCatalog();
@@ -360,21 +396,23 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
     }
     const rawExtra = demo ? loadJson<Opportunity[]>(STORAGE.extraOpps, []) : [];
     setExtraOpportunities(rawExtra);
-    const rawApps = loadJson<ApplicationRecord[]>(STORAGE.applications, []);
-    setApplications(
-      rawApps.map((a) => {
-        if (a.organizationId) return a;
-        const opp = resolveOpportunity(
-          a.opportunityId,
-          rawExtra,
-          demo ? SAMPLE_OPPORTUNITIES : [],
-        );
-        return {
-          ...a,
-          organizationId: opp?.organizationId ?? "",
-        };
-      }),
-    );
+    if (demo) {
+      const rawApps = loadJson<ApplicationRecord[]>(STORAGE.applications, []);
+      setApplications(
+        rawApps.map((a) => {
+          if (a.organizationId) return a;
+          const opp = resolveOpportunity(
+            a.opportunityId,
+            rawExtra,
+            demo ? SAMPLE_OPPORTUNITIES : [],
+          );
+          return {
+            ...a,
+            organizationId: opp?.organizationId ?? "",
+          };
+        }),
+      );
+    }
     const storedListings = loadJson<OrgListingRecord[] | null>(
       STORAGE.orgListings,
       null,
@@ -402,9 +440,11 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
     setRegisteredUsers(
       loadJson<RegisteredUserSnapshot[]>(STORAGE.registeredUsers, []),
     );
-    setExternalApplyIntents(
-      loadJson<ExternalApplyIntentRecord[]>(STORAGE.externalApplyIntents, []),
-    );
+    if (demo) {
+      setExternalApplyIntents(
+        loadJson<ExternalApplyIntentRecord[]>(STORAGE.externalApplyIntents, []),
+      );
+    }
     setLocalStorageReady(true);
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -446,8 +486,21 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   }, [savedIds, hydrated, demoMode]);
 
   useEffect(() => {
+    if (!hydrated || demoMode || session?.role !== "individual") return;
+    refreshMyApplications();
+    refreshMyExternalIntents();
+  }, [
+    hydrated,
+    demoMode,
+    session?.role,
+    session?.email,
+    refreshMyApplications,
+    refreshMyExternalIntents,
+  ]);
+
+  useEffect(() => {
     if (demoMode || !hydrated || session?.role !== "individual") return;
-    void fetch("/api/me/saved-opportunities")
+    void fetch("/api/me/saved-opportunities", { credentials: "include", cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { opportunityIds?: string[] } | null) => {
         if (d?.opportunityIds) setSavedIds(new Set(d.opportunityIds));
@@ -471,12 +524,14 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!hydrated || demoMode || session?.role !== "organization") return;
     refreshOrgPostedListings();
+    refreshOrgApplicationsFromNeon();
   }, [
     hydrated,
     demoMode,
     session?.role,
     session?.organizationId,
     refreshOrgPostedListings,
+    refreshOrgApplicationsFromNeon,
   ]);
 
   useEffect(() => {
@@ -485,9 +540,9 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   }, [hydrated, demoMode, session?.role, session?.email, refreshPendingOpportunities]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !demoMode) return;
     localStorage.setItem(STORAGE.applications, JSON.stringify(applications));
-  }, [applications, hydrated]);
+  }, [applications, hydrated, demoMode]);
 
   useEffect(() => {
     if (!hydrated || !demoMode) return;
@@ -543,12 +598,12 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   }, [registeredUsers, hydrated]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !demoMode) return;
     localStorage.setItem(
       STORAGE.externalApplyIntents,
       JSON.stringify(externalApplyIntents),
     );
-  }, [externalApplyIntents, hydrated]);
+  }, [externalApplyIntents, hydrated, demoMode]);
 
   useEffect(() => {
     if (!hydrated || !isDemoAuthEnabled()) return;
@@ -783,6 +838,62 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
         return { ok: false, message: "You have already applied to this role." };
       }
 
+      if (!demoMode) {
+        try {
+          const res = await fetch("/api/applications/internal", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              listingId: opp.id,
+              organizationId: opp.organizationId,
+              opportunityTitle: opp.title,
+              applicantFullName: payload.fullName.trim(),
+              applicantPhone,
+              cvUrl,
+              linkedinUrl: applicantProfile.linkedinUrl?.trim() || undefined,
+              portfolioUrl: applicantProfile.portfolioUrl?.trim() || undefined,
+              coverLetter: payload.coverLetter?.trim() || undefined,
+            }),
+          });
+          const data = (await res.json().catch(() => ({}))) as {
+            ok?: boolean;
+            id?: string;
+            error?: unknown;
+          };
+          if (!res.ok) {
+            const err =
+              typeof data.error === "string"
+                ? data.error
+                : "Could not submit application. Please try again.";
+            return { ok: false, message: err };
+          }
+          refreshMyApplications();
+          const orgEmailNeon = opp.contactEmail?.trim();
+          if (orgEmailNeon) {
+            pushNotification({
+              createdAt: new Date().toISOString(),
+              read: false,
+              audience: { kind: "org", email: normEmail(orgEmailNeon) },
+              title: "New application",
+              message: `Someone applied to “${opp.title}” via MasrJobs.org.`,
+            });
+          }
+          return {
+            ok: true,
+            message: data.id
+              ? "Application submitted and saved to the database."
+              : "Application submitted successfully.",
+          };
+        } catch {
+          return {
+            ok: false,
+            message:
+              "Network error submitting application. Check your connection and try again.",
+          };
+        }
+      }
+
       let serverId: string | undefined;
       try {
         const res = await fetch("/api/applications/internal", {
@@ -861,6 +972,8 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       applicantProfile,
       pushNotification,
       suppressedCatalogIds,
+      demoMode,
+      refreshMyApplications,
     ],
   );
 
@@ -887,18 +1000,37 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
           message: "You have already recorded this action for this listing.",
         };
       }
-      try {
-        await fetch("/api/applications/external-intent", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            listingId: opp.id,
-            channel: channel === "email" ? "EMAIL" : "EXTERNAL_LINK",
-          }),
-        });
-      } catch {
-        /* optional Neon */
+      if (!demoMode) {
+        try {
+          const res = await fetch("/api/applications/external-intent", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              listingId: opp.id,
+              channel: channel === "email" ? "EMAIL" : "EXTERNAL_LINK",
+            }),
+          });
+          const data = (await res.json().catch(() => ({}))) as {
+            ok?: boolean;
+            error?: unknown;
+          };
+          if (!res.ok) {
+            const err =
+              typeof data.error === "string"
+                ? data.error
+                : "Could not record your application. Please try again.";
+            return { ok: false, message: err };
+          }
+          refreshMyExternalIntents();
+          return { ok: true, message: "Recorded — see your applicant dashboard." };
+        } catch {
+          return {
+            ok: false,
+            message:
+              "Network error recording your application. Check your connection and try again.",
+          };
+        }
       }
       const row: ExternalApplyIntentRecord = {
         id: `ext-${Date.now()}`,
@@ -919,7 +1051,14 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       );
       return { ok: true, message: "Recorded — see your applicant dashboard." };
     },
-    [session, externalApplyIntents, extraOpportunities, catalogOpportunities],
+    [
+      session,
+      externalApplyIntents,
+      extraOpportunities,
+      catalogOpportunities,
+      demoMode,
+      refreshMyExternalIntents,
+    ],
   );
 
   const submitOrgOpportunity = useCallback(
@@ -1399,10 +1538,14 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
         try {
           const res = await fetch("/api/admin/opportunities/close", {
             method: "POST",
+            credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ opportunityId }),
           });
-          if (res.ok) refreshNeonCatalog();
+          if (res.ok) {
+            refreshNeonCatalog();
+            refreshOrgPostedListings();
+          }
         } catch {
           /* ignore */
         }
@@ -1421,7 +1564,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
         ),
       );
     },
-    [demoMode, catalogOpportunities, refreshNeonCatalog],
+    [demoMode, catalogOpportunities, refreshNeonCatalog, refreshOrgPostedListings],
   );
 
   const toggleOpportunityFeatured = useCallback((opportunityId: string) => {
@@ -1435,14 +1578,60 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   const updateApplicationStatus = useCallback(
     (applicationId: string, status: ApplicationStatus) => {
       if (!session || session.role !== "organization") return;
+      const target = applications.find((a) => a.id === applicationId);
+      if (!target || target.organizationId !== session.organizationId) return;
+
+      if (!demoMode) {
+        void (async () => {
+          try {
+            const res = await fetch("/api/organization/applications", {
+              method: "PATCH",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ applicationId, status }),
+            });
+            if (!res.ok) return;
+            const em = target.applicantEmail?.trim();
+            if (em) {
+              queueMicrotask(() =>
+                pushNotification({
+                  createdAt: new Date().toISOString(),
+                  read: false,
+                  audience: { kind: "user", email: normEmail(em) },
+                  title: "Application status updated",
+                  message: `Your application to “${target.opportunityTitle}” is now: ${status}.`,
+                }),
+              );
+            }
+            const sid = target.serverId ?? target.id;
+            if (sid) {
+              queueMicrotask(() => {
+                void fetch("/api/organization/transactional-email", {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    kind: "application-status-updated",
+                    applicationServerId: sid,
+                    statusLabel: status,
+                  }),
+                }).catch(() => {});
+              });
+            }
+            refreshOrgApplicationsFromNeon();
+          } catch {
+            /* ignore */
+          }
+        })();
+        return;
+      }
+
       setApplications((prev) => {
-        const target = prev.find((a) => a.id === applicationId);
-        if (!target) return prev;
-        if (target.organizationId !== session.organizationId) return prev;
-        const next = prev.map((a) =>
-          a.id === applicationId ? { ...a, status } : a,
-        );
-        const em = target.applicantEmail?.trim();
+        const t = prev.find((a) => a.id === applicationId);
+        if (!t) return prev;
+        if (t.organizationId !== session.organizationId) return prev;
+        const next = prev.map((a) => (a.id === applicationId ? { ...a, status } : a));
+        const em = t.applicantEmail?.trim();
         if (em) {
           queueMicrotask(() =>
             pushNotification({
@@ -1450,11 +1639,11 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
               read: false,
               audience: { kind: "user", email: normEmail(em) },
               title: "Application status updated",
-              message: `Your application to “${target.opportunityTitle}” is now: ${status}.`,
+              message: `Your application to “${t.opportunityTitle}” is now: ${status}.`,
             }),
           );
         }
-        if (target.serverId && !isDemoAuthEnabled()) {
+        if (t.serverId && !isDemoAuthEnabled()) {
           queueMicrotask(() => {
             void fetch("/api/organization/transactional-email", {
               method: "POST",
@@ -1462,7 +1651,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 kind: "application-status-updated",
-                applicationServerId: target.serverId,
+                applicationServerId: t.serverId,
                 statusLabel: status,
               }),
             }).catch(() => {});
@@ -1471,7 +1660,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
         return next;
       });
     },
-    [session, pushNotification],
+    [session, pushNotification, demoMode, applications, refreshOrgApplicationsFromNeon],
   );
 
   const closeOwnPublishedListing = useCallback(
