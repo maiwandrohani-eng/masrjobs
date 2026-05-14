@@ -27,10 +27,11 @@ const CATEGORIES: readonly OpportunityCategory[] = [
   "Grants",
 ] as const;
 
-function parseCategory(name: string): OpportunityCategory {
-  if (name === "NGO Jobs") return "Jobs";
-  return (CATEGORIES.includes(name as OpportunityCategory)
-    ? name
+export function parseCategoryName(name: string | null | undefined): OpportunityCategory {
+  const n = name ?? "Jobs";
+  if (n === "NGO Jobs") return "Jobs";
+  return (CATEGORIES.includes(n as OpportunityCategory)
+    ? n
     : "Jobs") as OpportunityCategory;
 }
 
@@ -107,7 +108,7 @@ export function mapOpportunityRecord(row: OpportunityRow): Opportunity {
     title: row.title,
     organizationId: row.organizationId,
     organizationName: row.organization?.name?.trim() || "Organization",
-    category: parseCategory(row.category?.nameEn ?? "Jobs"),
+    category: parseCategoryName(row.category?.nameEn),
     location: row.location ?? "",
     deadline,
     type: row.type,

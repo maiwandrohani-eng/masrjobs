@@ -1,11 +1,31 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { z } from "zod";
+import type { OpportunityStatus } from "@/generated/prisma/client";
 import { assertAppOrigin } from "@/lib/assert-app-origin";
 import { allocateUniqueOpportunitySlug } from "@/lib/allocate-opportunity-slug";
 import { authOptions } from "@/lib/auth-options";
+import { parseCategoryName } from "@/lib/db/map-prisma-catalog";
 import { getPrisma } from "@/lib/prisma";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import type { ListingStatus } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
+
+function prismaStatusToListing(status: OpportunityStatus): ListingStatus {
+  switch (status) {
+    case "PENDING_APPROVAL":
+      return "Pending approval";
+    case "PUBLISHED":
+      return "Published";
+    case "REJECTED":
+      return "Rejected";
+    case "CLOSED":
+      return "Closed";
+    default:
+      return "Pending approval";
+  }
+}
 
 const bodySchema = z.object({
   title: z.string().min(1),
@@ -49,6 +69,58 @@ function categoryToSlug(category: string): string {
     default:
       return "jobs";
   }
+}
+
+/** Employer dashboard: all opportunities for the signed-in organization (Neon). */
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== "ORG_USER") {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const orgId = session.user.organizationId;
+  if (!orgId) {
+    return NextResponse.json({ ok: true, listings: [] });
+  }
+
+  const prisma = getPrisma();
+  if (!prisma) {
+    return NextResponse.json({ ok: false, error: "Database unavailable" }, { status: 503 });
+  }
+
+  const rows = await prisma.opportunity.findMany({
+    where: { organizationId: orgId },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      createdAt: true,
+      category: { select: { nameEn: true } },
+      _count: { select: { applications: true } },
+    },
+  });
+
+  const listings = rows.map((row) => ({
+    id: `ol-${row.id}`,
+    opportunityId: row.id,
+    title: row.title,
+    category: parseCategoryName(row.category?.nameEn),
+    status: prismaStatusToListing(row.status),
+    submittedAt: row.createdAt.toISOString().slice(0, 10),
+    applicantCount: row._count.applications,
+    submittedByOrgId: orgId,
+  }));
+
+  return NextResponse.json(
+    { ok: true, listings },
+    {
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+      },
+    },
+  );
 }
 
 export async function POST(req: Request) {

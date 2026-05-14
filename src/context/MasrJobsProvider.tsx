@@ -181,6 +181,8 @@ type MasrJobsContextValue = {
 
   /** Re-fetch published catalog from the API (e.g. after updating organization directory fields). */
   refreshPublicCatalog: () => void;
+  /** Production: reload employer “Posted opportunities” table from Neon. */
+  refreshOrgPostedListings: () => void;
 };
 
 const MasrJobsContext = createContext<MasrJobsContextValue | null>(null);
@@ -281,6 +283,19 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [demoMode]);
 
+  const refreshOrgPostedListings = useCallback(() => {
+    if (demoMode) return;
+    void fetch("/api/organization/opportunities", {
+      credentials: "include",
+      cache: "no-store",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { ok?: boolean; listings?: OrgListingRecord[] } | null) => {
+        if (d?.ok && Array.isArray(d.listings)) setOrgListings(d.listings);
+      })
+      .catch(() => {});
+  }, [demoMode]);
+
   useEffect(() => {
     if (demoMode) return;
     refreshNeonCatalog();
@@ -364,7 +379,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       STORAGE.orgListings,
       null,
     );
-    if (storedListings?.length) setOrgListings(storedListings);
+    if (demo && storedListings?.length) setOrgListings(storedListings);
     const pOrgs = loadJson<PendingOrgRecord[] | null>(
       STORAGE.pendingOrgs,
       null,
@@ -454,6 +469,17 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   }, [hydrated, demoMode, session?.role, session?.email]);
 
   useEffect(() => {
+    if (!hydrated || demoMode || session?.role !== "organization") return;
+    refreshOrgPostedListings();
+  }, [
+    hydrated,
+    demoMode,
+    session?.role,
+    session?.organizationId,
+    refreshOrgPostedListings,
+  ]);
+
+  useEffect(() => {
     if (!hydrated || demoMode || session?.role !== "admin") return;
     refreshPendingOpportunities();
   }, [hydrated, demoMode, session?.role, session?.email, refreshPendingOpportunities]);
@@ -464,9 +490,9 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
   }, [applications, hydrated]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !demoMode) return;
     localStorage.setItem(STORAGE.orgListings, JSON.stringify(orgListings));
-  }, [orgListings, hydrated]);
+  }, [orgListings, hydrated, demoMode]);
 
   useEffect(() => {
     if (!hydrated || !demoMode) return;
@@ -921,19 +947,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
             };
             if (!res.ok || !data.ok || !data.listing) return;
             const listing = data.listing;
-            setOrgListings((prev) => [
-              {
-                id: `ol-${listing.opportunityId}`,
-                opportunityId: listing.opportunityId,
-                title: listing.title,
-                category: listing.category,
-                status: "Pending approval",
-                submittedAt: listing.submittedAt,
-                applicantCount: 0,
-                submittedByOrgId: session.organizationId ?? undefined,
-              },
-              ...prev,
-            ]);
+            refreshOrgPostedListings();
             refreshNeonCatalog();
             refreshPendingOpportunities();
             pushNotification({
@@ -988,7 +1002,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
         message: `${built.organizationName} submitted “${built.title}”.`,
       });
     },
-    [session, organizationCanPost, pushNotification, demoMode, refreshNeonCatalog, refreshPendingOpportunities],
+    [session, organizationCanPost, pushNotification, demoMode, refreshNeonCatalog, refreshPendingOpportunities, refreshOrgPostedListings],
   );
 
   const approveOrganization = useCallback(
@@ -1497,7 +1511,10 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ opportunityId }),
           });
-          if (res.ok) refreshNeonCatalog();
+          if (res.ok) {
+            refreshNeonCatalog();
+            refreshOrgPostedListings();
+          }
         } catch {
           /* ignore */
         }
@@ -1512,7 +1529,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
         );
       }
     },
-    [session, demoMode, catalogOpportunities, refreshNeonCatalog],
+    [session, demoMode, catalogOpportunities, refreshNeonCatalog, refreshOrgPostedListings],
   );
 
   const value = useMemo<MasrJobsContextValue>(
@@ -1558,6 +1575,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       suppressedCatalogIds,
       orgSubmittedOpportunities: extraOpportunities,
       refreshPublicCatalog: refreshNeonCatalog,
+      refreshOrgPostedListings,
     }),
     [
       session,
@@ -1601,6 +1619,7 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
       suppressedCatalogIds,
       extraOpportunities,
       refreshNeonCatalog,
+      refreshOrgPostedListings,
     ],
   );
 
