@@ -113,24 +113,27 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (!hydrated || session?.role !== "admin" || previewAuth) return;
     let cancelled = false;
-    setProfileLoading(true);
-    setProfileMsg(null);
-    void fetch("/api/admin/organization-profile-changes", { credentials: "include" })
-      .then(async (res) => {
-        const body = (await res.json()) as { ok?: boolean; items?: OrgProfileChangeRow[] };
-        if (cancelled) return;
-        if (!res.ok || !body.ok) {
-          setProfileRows([]);
-          setProfileMsg("Could not load pending organization profile updates.");
-          return;
-        }
-        setProfileRows(body.items ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setProfileMsg("Could not load pending organization profile updates.");
-      })
-      .finally(() => {
-        if (!cancelled) setProfileLoading(false);
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      setProfileLoading(true);
+      setProfileMsg(null);
+      void fetch("/api/admin/organization-profile-changes", { credentials: "include" })
+        .then(async (res) => {
+          const body = (await res.json()) as { ok?: boolean; items?: OrgProfileChangeRow[] };
+          if (cancelled) return;
+          if (!res.ok || !body.ok) {
+            setProfileRows([]);
+            setProfileMsg("Could not load pending organization profile updates.");
+            return;
+          }
+          setProfileRows(body.items ?? []);
+        })
+        .catch(() => {
+          if (!cancelled) setProfileMsg("Could not load pending organization profile updates.");
+        })
+        .finally(() => {
+          if (!cancelled) setProfileLoading(false);
+        });
       });
     return () => {
       cancelled = true;

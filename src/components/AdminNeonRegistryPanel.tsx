@@ -59,6 +59,7 @@ export function AdminNeonRegistryPanel({ disabled }: { disabled: boolean }) {
 
   const load = useCallback(async () => {
     if (disabled) return;
+    await Promise.resolve();
     setLoading(true);
     setMessage(null);
     try {
@@ -85,7 +86,10 @@ export function AdminNeonRegistryPanel({ disabled }: { disabled: boolean }) {
   }, [disabled]);
 
   useEffect(() => {
-    void load();
+    const id = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [load]);
 
   const runMutation = async (key: string, fn: () => Promise<boolean>) => {

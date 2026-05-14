@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { ContactPublicData } from "@/lib/site-contact";
 import type { SocialLink } from "@/lib/site-contact-defaults";
@@ -19,31 +20,37 @@ export function AdminSiteContactPanel({ disabled }: Props) {
   const [mapEmbedUrl, setMapEmbedUrl] = useState("");
   const [social, setSocial] = useState<SocialLink[]>([]);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     if (disabled) {
       setLoading(false);
       return;
     }
+    await Promise.resolve();
     setLoading(true);
     setErr(null);
-    void fetch("/api/admin/site-settings/contact", { credentials: "include" })
-      .then(async (res) => {
-        const j = (await res.json()) as { ok?: boolean; data?: ContactPublicData; error?: string };
-        if (!res.ok || !j.ok || !j.data) {
-          setErr(typeof j.error === "string" ? j.error : "Could not load contact settings.");
-          return;
-        }
-        setOfficeTitle(j.data.officeTitle);
-        setBody(j.data.body);
-        setMapEmbedUrl(j.data.mapEmbedUrl);
-        setSocial(j.data.social.length ? j.data.social : []);
-      })
-      .catch(() => setErr("Could not load contact settings."))
-      .finally(() => setLoading(false));
+    try {
+      const res = await fetch("/api/admin/site-settings/contact", { credentials: "include" });
+      const j = (await res.json()) as { ok?: boolean; data?: ContactPublicData; error?: string };
+      if (!res.ok || !j.ok || !j.data) {
+        setErr(typeof j.error === "string" ? j.error : "Could not load contact settings.");
+        return;
+      }
+      setOfficeTitle(j.data.officeTitle);
+      setBody(j.data.body);
+      setMapEmbedUrl(j.data.mapEmbedUrl);
+      setSocial(j.data.social.length ? j.data.social : []);
+    } catch {
+      setErr("Could not load contact settings.");
+    } finally {
+      setLoading(false);
+    }
   }, [disabled]);
 
   useEffect(() => {
-    load();
+    const id = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [load]);
 
   const updateSocial = (i: number, patch: Partial<SocialLink>) => {
@@ -132,9 +139,9 @@ export function AdminSiteContactPanel({ disabled }: Props) {
       <h2 className="text-base font-bold text-brand-navy">Public contact card</h2>
       <p className="mt-2 text-sm text-foreground/70">
         Updates the sidebar on the{" "}
-        <a href="/contact" className="font-semibold text-brand-gold underline">
+        <Link href="/contact" className="font-semibold text-brand-gold underline">
           Contact
-        </a>{" "}
+        </Link>{" "}
         page and the social icons in the site footer.
       </p>
 

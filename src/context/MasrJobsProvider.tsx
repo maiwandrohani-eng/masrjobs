@@ -303,7 +303,9 @@ export function MasrJobsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (demoMode || !session || session.role !== "organization") {
-      setOrgPostingAllowed(null);
+      void Promise.resolve().then(() => {
+        setOrgPostingAllowed(null);
+      });
       return;
     }
     refreshOrgPostingAllowed();

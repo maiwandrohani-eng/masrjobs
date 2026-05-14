@@ -4,7 +4,7 @@ import { getToken } from "next-auth/jwt";
 import type { UserRole } from "@/generated/prisma/enums";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const demo = process.env.NEXT_PUBLIC_ENABLE_DEMO_AUTH === "true";
   const { pathname } = req.nextUrl;
 

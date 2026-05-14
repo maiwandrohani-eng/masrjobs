@@ -62,6 +62,7 @@ export function EmployerOrganizationProfilePanel() {
   const [phone, setPhone] = useState("");
 
   const load = useCallback(async () => {
+    await Promise.resolve();
     setLoading(true);
     setMsg(null);
     setAuthBlocked(false);
@@ -102,7 +103,10 @@ export function EmployerOrganizationProfilePanel() {
   }, []);
 
   useEffect(() => {
-    void load();
+    const id = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [load]);
 
   const onSave = async (e: React.FormEvent) => {
@@ -164,9 +168,9 @@ export function EmployerOrganizationProfilePanel() {
       <p className="mt-2 text-sm text-foreground/70">
         Changes to your public name, contact details, and description are{" "}
         <strong>submitted for administrator approval</strong> before they appear on the{" "}
-        <a className="font-semibold text-brand-gold underline" href="/organizations">
+        <Link className="font-semibold text-brand-gold underline" href="/organizations">
           organization directory
-        </a>{" "}
+        </Link>{" "}
         and listings. Your current approved details stay visible until an admin approves a new
         submission.
       </p>

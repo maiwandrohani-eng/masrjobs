@@ -72,7 +72,6 @@ export function buildPasswordResetEmail(resetUrl: string): {
   html: string;
   text: string;
 } {
-  const safeUrl = escapeHtml(resetUrl);
   const inner = `
     <h1 style="margin:0 0 12px 0;font-size:20px;color:#0f172a;">Reset your password</h1>
     <p style="margin:0;">We received a request to reset the password for your MasrJobs.org account.</p>
