@@ -4,6 +4,8 @@ import {
   buildApplicationStatusUpdatedEmail,
   buildApplicationSubmittedEmail,
   buildApplicationSubmittedOrgEmail,
+  buildContactConfirmationEmail,
+  buildContactStaffEmail,
   buildOpportunityApprovedEmail,
   buildOpportunityRejectedEmail,
   buildOrganizationApprovedEmail,
@@ -139,4 +141,34 @@ export function sendApplicationStatusUpdatedEmail(
     const r = await sendEmail({ to, ...body });
     if (!r.ok) console.error("[email] status update failed", r.error);
   });
+}
+
+/** Contact form: notify inbox first (with reply-to), then auto-reply to submitter. */
+export async function sendContactFormEmails(params: {
+  fromName: string;
+  fromEmail: string;
+  subject: string;
+  message: string;
+  inboxTo: string;
+}): Promise<{ staff: SendEmailResult; user: SendEmailResult }> {
+  const staffBody = buildContactStaffEmail({
+    fromName: params.fromName,
+    fromEmail: params.fromEmail,
+    subject: params.subject,
+    message: params.message,
+  });
+  const staff = await sendEmail({
+    to: params.inboxTo,
+    replyTo: params.fromEmail,
+    ...staffBody,
+  });
+  if (!staff.ok) {
+    return { staff, user: { ok: false, error: "skipped" } };
+  }
+  const userBody = buildContactConfirmationEmail({
+    displayName: params.fromName,
+    subject: params.subject,
+  });
+  const user = await sendEmail({ to: params.fromEmail, ...userBody });
+  return { staff, user };
 }

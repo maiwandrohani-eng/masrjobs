@@ -244,3 +244,55 @@ export function buildApplicationStatusUpdatedEmail(params: {
     text,
   };
 }
+
+/** Auto-reply after someone uses the public contact form */
+export function buildContactConfirmationEmail(params: {
+  displayName: string;
+  subject: string;
+}): { subject: string; html: string; text: string } {
+  const name = escapeHtml(params.displayName.trim() || "there");
+  const subj = escapeHtml(params.subject.trim());
+  const origin = siteOrigin();
+  const inner = `
+    <h1 style="margin:0 0 12px 0;font-size:20px;color:#0f172a;">We received your message</h1>
+    <p style="margin:0;">Hi ${name},</p>
+    <p style="margin:16px 0 0 0;">Thank you for contacting MasrJobs.org. We have received your message regarding <strong>${subj}</strong> and will reply as soon as we can.</p>
+    <p style="margin:16px 0 0 0;font-size:14px;color:#64748b;">If your question is urgent, you can also reach us at <a href="mailto:hello@masrjobs.org" style="color:#c9a227;font-weight:600;">hello@masrjobs.org</a>.</p>
+    ${cta(`${origin}/`, "Visit MasrJobs.org")}
+  `;
+  const text = `We received your message — MasrJobs.org\n\nHi ${params.displayName.trim() || "there"},\n\nWe received your message about: ${params.subject.trim()}\n\nWe will reply as soon as we can.\n\n${origin}/\n\n${emailFooterText()}`;
+  return {
+    subject: "We received your message — MasrJobs.org",
+    html: wrapEmailHtml(inner, "MasrJobs.org received your contact form message."),
+    text,
+  };
+}
+
+/** Internal copy of a contact form submission (HTML body uses escaped fields). */
+export function buildContactStaffEmail(params: {
+  fromName: string;
+  fromEmail: string;
+  subject: string;
+  message: string;
+}): { subject: string; html: string; text: string } {
+  const n = escapeHtml(params.fromName.trim());
+  const e = escapeHtml(params.fromEmail.trim());
+  const s = escapeHtml(params.subject.trim());
+  const msgEscaped = escapeHtml(params.message.trim())
+    .replace(/\r\n/g, "\n")
+    .replace(/\n/g, "<br/>");
+  const inner = `
+    <h1 style="margin:0 0 12px 0;font-size:20px;color:#0f172a;">Contact form</h1>
+    <p style="margin:0;"><strong>Name:</strong> ${n}</p>
+    <p style="margin:8px 0 0 0;"><strong>Email:</strong> ${e}</p>
+    <p style="margin:8px 0 0 0;"><strong>Subject:</strong> ${s}</p>
+    <h2 style="margin:24px 0 8px 0;font-size:15px;color:#0f172a;">Message</h2>
+    <p style="margin:0;line-height:1.55;">${msgEscaped}</p>
+  `;
+  const text = `Contact form — MasrJobs.org\n\nName: ${params.fromName.trim()}\nEmail: ${params.fromEmail.trim()}\nSubject: ${params.subject.trim()}\n\nMessage:\n${params.message.trim()}\n\n${emailFooterText()}`;
+  return {
+    subject: `[MasrJobs contact] ${params.subject.trim().slice(0, 120)}`,
+    html: wrapEmailHtml(inner, "New message from masrjobs.org contact form."),
+    text,
+  };
+}
