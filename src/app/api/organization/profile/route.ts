@@ -13,6 +13,7 @@ const profileFields = z.object({
   about: z.string().max(12000),
   location: z.string().max(200),
   website: z.string().max(500),
+  logoUrl: z.string().max(500).optional().default(""),
   phone: z.string().max(40),
 });
 
@@ -52,6 +53,7 @@ export async function GET() {
         description: true,
         location: true,
         website: true,
+        logoUrl: true,
         phone: true,
         verificationStatus: true,
         isActive: true,
@@ -78,6 +80,7 @@ export async function GET() {
       about: org.description ?? "",
       location: org.location ?? "",
       website: org.website ?? "",
+      logoUrl: org.logoUrl ?? "",
       phone: org.phone ?? "",
       verificationStatus: org.verificationStatus,
     };
@@ -94,6 +97,7 @@ export async function GET() {
               about: pending.proposedDescription ?? "",
               location: pending.proposedLocation ?? "",
               website: pending.proposedWebsite ?? "",
+              logoUrl: pending.proposedLogoUrl ?? "",
               phone: pending.proposedPhone ?? "",
               submittedAt: pending.createdAt.toISOString(),
             }
@@ -165,28 +169,37 @@ export async function PUT(req: Request) {
   const locTrim = parsed.data.location.trim();
   const phoneTrim = parsed.data.phone.trim();
   const websiteRaw = parsed.data.website.trim();
-  if (websiteRaw) {
-    if (!/^https:\/\//i.test(websiteRaw)) {
+  const logoUrlRaw = parsed.data.logoUrl?.trim() ?? "";
+
+  function validateHttpsUrl(raw: string, field: string) {
+    if (!raw) return null;
+    if (!/^https:\/\//i.test(raw)) {
       return NextResponse.json(
-        { ok: false, error: { website: ["Use a full https:// link (e.g. your official site)."] } },
+        { ok: false, error: { [field]: ["Use a full https:// link."] } },
         { status: 400 },
       );
     }
     try {
-      const u = new URL(websiteRaw);
+      const u = new URL(raw);
       if (u.protocol !== "https:") {
         return NextResponse.json(
-          { ok: false, error: { website: ["Only https links are allowed."] } },
+          { ok: false, error: { [field]: ["Only https links are allowed."] } },
           { status: 400 },
         );
       }
     } catch {
       return NextResponse.json(
-        { ok: false, error: { website: ["Invalid website URL."] } },
+        { ok: false, error: { [field]: ["Invalid URL."] } },
         { status: 400 },
       );
     }
+    return null;
   }
+
+  const websiteErr = validateHttpsUrl(websiteRaw, "website");
+  if (websiteErr) return websiteErr;
+  const logoUrlErr = validateHttpsUrl(logoUrlRaw, "logoUrl");
+  if (logoUrlErr) return logoUrlErr;
 
   try {
     const orgCheck = await prisma.organization.findUnique({
@@ -216,6 +229,7 @@ export async function PUT(req: Request) {
           proposedEmail: contactEmailNorm,
           proposedPhone: phoneTrim.length > 0 ? phoneTrim : null,
           proposedWebsite: websiteRaw.length > 0 ? websiteRaw : null,
+          proposedLogoUrl: logoUrlRaw.length > 0 ? logoUrlRaw : null,
           proposedLocation: locTrim.length > 0 ? locTrim : null,
           proposedDescription: aboutTrim.length > 0 ? aboutTrim : null,
         },

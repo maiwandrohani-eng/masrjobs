@@ -123,6 +123,7 @@ export async function POST(req: Request) {
           email: change.proposedEmail,
           phone: change.proposedPhone,
           website: change.proposedWebsite,
+          logoUrl: change.proposedLogoUrl,
           location: change.proposedLocation,
           description: change.proposedDescription,
         },

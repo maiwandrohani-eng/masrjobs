@@ -11,6 +11,7 @@ type PublishedProfile = {
   about: string;
   location: string;
   website: string;
+  logoUrl: string;
   phone: string;
   verificationStatus: string;
 };
@@ -22,6 +23,7 @@ type PendingProfile = {
   about: string;
   location: string;
   website: string;
+  logoUrl: string;
   phone: string;
   submittedAt: string;
 };
@@ -59,6 +61,7 @@ export function EmployerOrganizationProfilePanel() {
   const [about, setAbout] = useState("");
   const [location, setLocation] = useState("");
   const [website, setWebsite] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
   const [phone, setPhone] = useState("");
 
   const load = useCallback(async () => {
@@ -94,6 +97,7 @@ export function EmployerOrganizationProfilePanel() {
       setAbout(src.about);
       setLocation(src.location);
       setWebsite(src.website);
+      setLogoUrl(src.logoUrl);
       setPhone(src.phone);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Could not load profile.");
@@ -124,6 +128,7 @@ export function EmployerOrganizationProfilePanel() {
           about,
           location,
           website,
+          logoUrl,
           phone,
         }),
       });
@@ -331,6 +336,25 @@ export function EmployerOrganizationProfilePanel() {
                 placeholder="https://www.example.org"
               />
               <p className="mt-1 text-xs text-foreground/55">Must start with https:// if provided</p>
+            </div>
+            <div>
+              <label htmlFor="org-logo-url" className="block text-sm font-semibold text-brand-navy">
+                Logo image URL (optional)
+              </label>
+              <input
+                id="org-logo-url"
+                name="logoUrl"
+                type="url"
+                inputMode="url"
+                maxLength={500}
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+                className="mt-2 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/45"
+                placeholder="https://www.example.org/logo.png"
+              />
+              <p className="mt-1 text-xs text-foreground/55">
+                Direct link to a PNG or SVG on your website. Used on the homepage organizations strip. Must start with https://.
+              </p>
             </div>
             <div>
               <label htmlFor="org-phone" className="block text-sm font-semibold text-brand-navy">

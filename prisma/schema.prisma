@@ -171,6 +171,7 @@ model OrganizationProfileChange {
   proposedEmail       String?
   proposedPhone       String?
   proposedWebsite     String?
+  proposedLogoUrl     String?
   proposedLocation    String?
   proposedDescription String? @db.Text
 
