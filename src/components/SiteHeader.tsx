@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
 import { cn } from "@/lib/cn";
+import { useLanguage } from "@/context/LanguageContext";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
 
 const nav = [
@@ -15,6 +16,40 @@ const nav = [
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ] as const;
+
+function LanguageToggle({ className }: { className?: string }) {
+  const { locale, setLocale } = useLanguage();
+  return (
+    <div
+      className={`flex rounded-lg border border-brand-border bg-white p-0.5 text-xs font-semibold ${className ?? ""}`}
+      role="group"
+      aria-label="Language"
+    >
+      <button
+        type="button"
+        onClick={() => setLocale("en")}
+        className={`rounded-md px-2.5 py-1.5 transition ${
+          locale === "en"
+            ? "bg-brand-navy text-white"
+            : "text-brand-navy/70 hover:bg-brand-muted"
+        }`}
+      >
+        EN
+      </button>
+      <button
+        type="button"
+        onClick={() => setLocale("ar")}
+        className={`rounded-md px-2.5 py-1.5 transition ${
+          locale === "ar"
+            ? "bg-brand-navy text-white"
+            : "text-brand-navy/70 hover:bg-brand-muted"
+        }`}
+      >
+        AR
+      </button>
+    </div>
+  );
+}
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -50,6 +85,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          <LanguageToggle />
           {hydrated && session ? (
             <Link
               href={dashboardHref}
@@ -94,6 +130,9 @@ export function SiteHeader() {
         )}
       >
         <nav className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
+          <div className="px-3 py-2">
+            <LanguageToggle className="w-fit" />
+          </div>
           {nav.map((item) => (
             <Link
               key={item.href}

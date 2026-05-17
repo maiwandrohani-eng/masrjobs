@@ -10,6 +10,8 @@ export type ResourceArticle = {
   title: string;
   excerpt: string;
   category: string;
+  author: string;
+  readTimeMinutes: number;
 };
 
 function ReadMoreLink({ slug, articleTitle }: { slug: string; articleTitle: string }) {
@@ -52,6 +54,9 @@ export function ResourcesArticles({ articles }: { articles: ResourceArticle[] })
                 {a.category}
               </p>
               <h2 className="mt-1 text-lg font-bold text-brand-navy">{a.title}</h2>
+              <p className="mt-2 text-xs text-foreground/55">
+                {a.author} · {a.readTimeMinutes} min read
+              </p>
               <p className="mt-3 flex-1 text-sm leading-relaxed text-foreground/75">{a.excerpt}</p>
               <div className="mt-5">
                 <ReadMoreLink slug={a.slug} articleTitle={a.title} />
@@ -71,6 +76,9 @@ export function ResourcesArticles({ articles }: { articles: ResourceArticle[] })
                   {a.category}
                 </p>
                 <h2 className="mt-0.5 text-base font-bold text-brand-navy">{a.title}</h2>
+                <p className="mt-1 text-xs text-foreground/55">
+                  {a.author} · {a.readTimeMinutes} min read
+                </p>
                 <p className="mt-1 text-sm text-foreground/75">{a.excerpt}</p>
               </div>
               <div className={cn("flex shrink-0 sm:items-center")}>

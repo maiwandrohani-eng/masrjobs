@@ -32,6 +32,8 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
+      dir="ltr"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       {/* suppressHydrationWarning: browser extensions (e.g. Grammarly) inject body attributes after SSR */}

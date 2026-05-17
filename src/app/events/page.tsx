@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { PageIntro, PageShell } from "@/components/PageShell";
+import { loadCommunityEvents } from "@/lib/community-events";
+import { getPrisma } from "@/lib/prisma";
 
 export const metadata = {
   title: "Events & key dates",
@@ -7,53 +9,46 @@ export const metadata = {
     "Workshops, webinars, and milestone dates for Egypt’s development and social impact community.",
 };
 
-type EventRow = { date: string; title: string; detail: string; href?: string };
+export const dynamic = "force-dynamic";
 
-const EVENTS: EventRow[] = [
-  {
-    date: "2026-05-28",
-    title: "CV clinic — social impact roles (online)",
-    detail: "Open session on structuring CVs for NGO and consultancy applications.",
-    href: "/resources",
-  },
-  {
-    date: "2026-06-12",
-    title: "Safeguarding refresher — hiring managers",
-    detail: "Discussion on fair screening and referral pathways when shortlisting.",
-    href: "/resources/safeguarding-basics-every-applicant-should-know",
-  },
-  {
-    date: "2026-06-30",
-    title: "Q2 reporting window — many donor roles",
-    detail: "Reminder: several MEAL and programme reporting roles track to quarter-end cycles.",
-    href: "/opportunities",
-  },
-  {
-    date: "2026-09-15",
-    title: "Regional skills week (hybrid, Cairo)",
-    detail: "Community-led trainings on facilitation, MEAL basics, and remote collaboration.",
-    href: "/opportunities?category=Trainings",
-  },
-];
+export default async function EventsPage() {
+  const prisma = getPrisma();
+  const events = prisma ? await loadCommunityEvents(prisma) : [];
+  const hasUnconfirmed = events.some((e) => !e.confirmed);
 
-export default function EventsPage() {
   return (
     <div className="min-h-[60vh] bg-background">
       <PageShell className="max-w-3xl">
         <PageIntro
           eyebrow="Community"
           title="Events & key dates"
-          description="Editorial calendar of sessions and seasonal hiring rhythms. Dates are illustrative — confirm with organizers and live listings."
+          description="Editorial calendar of sessions and seasonal hiring rhythms."
         />
+        {hasUnconfirmed ? (
+          <p
+            className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+            role="status"
+          >
+            Some events below are not yet confirmed. Check back or contact the organizer before
+            registering.
+          </p>
+        ) : null}
         <ul className="space-y-4">
-          {EVENTS.map((e) => (
+          {events.map((e) => (
             <li
-              key={e.date + e.title}
+              key={e.id}
               className="rounded-2xl border border-brand-border bg-white p-5 shadow-sm"
             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">
-                {e.date}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">
+                  {e.eventDate}
+                </p>
+                {!e.confirmed ? (
+                  <span className="rounded-md border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
+                    UNCONFIRMED
+                  </span>
+                ) : null}
+              </div>
               <p className="mt-1 text-base font-bold text-brand-navy">{e.title}</p>
               <p className="mt-2 text-sm text-foreground/75">{e.detail}</p>
               {e.href ? (

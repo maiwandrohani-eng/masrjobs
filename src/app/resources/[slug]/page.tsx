@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
 import { RESOURCE_ARTICLES, getResourceArticle } from "@/lib/resources-articles";
+import { resourceArticleAuthor, resourceReadTimeMinutes } from "@/lib/resources-read-time";
 import { absoluteUrl } from "@/lib/site-url";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -37,6 +38,8 @@ export default async function ResourceArticlePage({ params }: Props) {
     "en-GB",
     { day: "numeric", month: "long", year: "numeric" },
   );
+  const author = resourceArticleAuthor(article);
+  const readMins = resourceReadTimeMinutes(article);
 
   return (
     <div className="min-h-[60vh] bg-background">
@@ -55,7 +58,9 @@ export default async function ResourceArticlePage({ params }: Props) {
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-navy md:text-4xl">
           {article.title}
         </h1>
-        <p className="mt-2 text-sm text-foreground/60">Published {published}</p>
+        <p className="mt-2 text-sm text-foreground/60">
+          {author} · {readMins} min read · Published {published}
+        </p>
         <p className="mt-6 text-base leading-relaxed text-foreground/80">{article.excerpt}</p>
 
         <div className="mt-10 space-y-10">

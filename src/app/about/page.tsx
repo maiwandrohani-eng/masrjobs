@@ -28,7 +28,10 @@ export default function AboutPage() {
               <li>Professionals seeking NGO jobs, consultancies, and fellowships</li>
               <li>Students and graduates exploring trainings and volunteering</li>
               <li>Organizations recruiting vetted talent and publishing tenders or grants</li>
-              <li>Donors and partners looking for visible, well-governed listings</li>
+              <li>
+                Egyptian and international organizations seeking to reach pre-vetted,
+                mission-aligned candidates in Egypt.
+              </li>
             </ul>
           </section>
 
@@ -38,6 +41,22 @@ export default function AboutPage() {
               Organization accounts and new listings pass through an admin review step
               before going live. This reduces spam, protects applicants, and keeps the
               platform credible for Egypt’s social impact ecosystem.
+            </p>
+          </section>
+
+          <section className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm md:p-8">
+            <h2 className="text-xl font-bold text-brand-navy">Who built this</h2>
+            <p className="mt-3 text-foreground/80 leading-relaxed">
+              MasrJobs.org was founded by Maiwand Rohani, CEO of INARA (International
+              Network for Aid, Relief, and Assistance), with the support of volunteers from
+              Egypt’s NGO sector who contributed their time and expertise to build the
+              platform.
+            </p>
+            <p className="mt-4 text-foreground/80 leading-relaxed">
+              The platform grew out of a direct need observed through humanitarian and
+              development work in Egypt — the absence of a single, trustworthy,
+              sector-specific space where mission-driven professionals and organizations
+              could find each other. MasrJobs is the answer to that gap.
             </p>
           </section>
         </div>

@@ -2,7 +2,19 @@
 
 import { useState } from "react";
 
-export function NewsletterSignup() {
+type Props = {
+  source?: string;
+  placeholder?: string;
+  buttonLabel?: string;
+  className?: string;
+};
+
+export function NewsletterSignup({
+  source = "resources",
+  placeholder = "you@email.com",
+  buttonLabel = "Join list",
+  className,
+}: Props) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -21,7 +33,7 @@ export function NewsletterSignup() {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: trimmed, source: "resources" }),
+      body: JSON.stringify({ email: trimmed, source }),
     })
       .then(async (res) => {
         const data = (await res.json()) as {
@@ -57,7 +69,10 @@ export function NewsletterSignup() {
   return (
     <form
       onSubmit={onSubmit}
-      className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start"
+      className={
+        className ??
+        "mt-4 flex flex-col gap-3 sm:flex-row sm:items-start"
+      }
     >
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <input
@@ -65,7 +80,7 @@ export function NewsletterSignup() {
           name="email"
           autoComplete="email"
           inputMode="email"
-          placeholder="you@email.com"
+          placeholder={placeholder}
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
@@ -90,7 +105,7 @@ export function NewsletterSignup() {
         disabled={status === "loading"}
         className="shrink-0 rounded-xl bg-brand-navy px-6 py-2.5 text-sm font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 disabled:opacity-60"
       >
-        {status === "loading" ? "Saving…" : "Join list"}
+        {status === "loading" ? "Saving…" : buttonLabel}
       </button>
     </form>
   );

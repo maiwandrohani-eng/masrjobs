@@ -28,8 +28,8 @@ const cards = [
   },
   {
     href: "/impact",
-    title: "Transparency",
-    text: "How we think about quality listings and a fair experience for everyone.",
+    title: "Our commitments",
+    text: "How we verify employers, review listings, and protect applicants.",
   },
 ] as const;
 

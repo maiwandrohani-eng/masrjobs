@@ -383,6 +383,31 @@ model NewsletterSubscription {
   @@index([createdAt])
 }
 
+/** Homepage early-launch notify list (shown when published opportunity count is under 10). */
+model EarlyAccessEmail {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/** Community events calendar (public events page). */
+model CommunityEvent {
+  id        String   @id @default(cuid())
+  eventDate String
+  title     String
+  detail    String   @db.Text
+  href      String?
+  confirmed Boolean  @default(false)
+  sortOrder Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sortOrder, eventDate])
+}
+
 /** Key-value settings editable from admin (e.g. public contact card). */
 model SiteSetting {
   key       String   @id

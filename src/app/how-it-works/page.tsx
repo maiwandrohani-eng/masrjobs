@@ -29,8 +29,7 @@ export default function HowItWorksPage() {
                 .
               </li>
               <li>
-                Listings are posted by organizations and reviewed before they appear publicly
-                where the workflow requires it.
+                All listings are reviewed by the MasrJobs team before going live.
               </li>
               <li>
                 Some roles use <strong>internal apply</strong> on MasrJobs.org; others use
@@ -48,20 +47,28 @@ export default function HowItWorksPage() {
           </section>
           <section>
             <h2 className="text-lg font-bold text-brand-navy">For employers</h2>
-            <ul className="mt-3 list-disc space-y-2 pl-5">
+            <ol className="mt-3 list-decimal space-y-3 pl-5">
               <li>
-                Organizations register, then an administrator verifies the account before
-                new listings can be submitted (where that workflow is enabled).
+                Register your organization — create an account and submit your organization
+                profile for admin review.
               </li>
               <li>
-                You can post jobs, consultancies, trainings, volunteer roles, tenders, and
-                grants using the structured employer form.
+                Account approved — once verified by the MasrJobs team, you gain access to your
+                employer dashboard and can submit listings.
               </li>
               <li>
-                Each submission is reviewed for quality and fit before it is published on
-                the public directory.
+                Each listing reviewed — every listing you submit is individually reviewed for
+                quality and fit before it appears publicly on the platform.
               </li>
-            </ul>
+            </ol>
+            <p className="mt-4">
+              This two-stage process means every organization and every listing on MasrJobs
+              has been individually reviewed before any applicant sees it.
+            </p>
+            <p className="mt-4">
+              Most listings are reviewed within 48 hours of submission. You will receive a
+              confirmation email when your listing is live.
+            </p>
             <p className="mt-4">
               <Link href="/posting-guidelines" className="font-semibold text-brand-gold underline">
                 Posting guidelines for faster approval →

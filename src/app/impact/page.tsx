@@ -18,6 +18,31 @@ export default function ImpactPage() {
         />
         <div className="space-y-8 text-sm leading-relaxed text-foreground/80">
           <section>
+            <h2 className="text-lg font-bold text-brand-navy">Our commitments</h2>
+            <ul className="mt-3 list-disc space-y-2 pl-5">
+              <li>Every listing is reviewed by a human before publication.</li>
+              <li>
+                We do not accept listings from organizations with open safeguarding violations
+                or fraud allegations.
+              </li>
+              <li>
+                Listings with false deadlines or closed roles are removed within 24 hours of
+                being reported.
+              </li>
+              <li>We do not sell applicant data to third parties.</li>
+            </ul>
+          </section>
+          <section>
+            <h2 className="text-lg font-bold text-brand-navy">How verification works</h2>
+            <p className="mt-3">
+              MasrJobs uses a two-stage review process. First, every organization account is
+              verified by the admin team before the organization can post anything. Second,
+              every individual listing is reviewed for quality and fit before it appears
+              publicly. This means nothing on MasrJobs is unreviewed — not the employer, not
+              the role.
+            </p>
+          </section>
+          <section>
             <h2 className="text-lg font-bold text-brand-navy">What we optimize for</h2>
             <ul className="mt-3 list-disc space-y-2 pl-5">
               <li>

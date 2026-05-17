@@ -3,6 +3,7 @@ export type ResourceArticleSummary = {
   title: string;
   excerpt: string;
   category: string;
+  author?: string;
 };
 
 export type ResourceArticleBody = ResourceArticleSummary & {
@@ -172,10 +173,11 @@ export function getResourceArticle(slug: string): ResourceArticleBody | undefine
 }
 
 export function resourceArticleSummaries(): ResourceArticleSummary[] {
-  return RESOURCE_ARTICLES.map(({ slug, title, excerpt, category }) => ({
+  return RESOURCE_ARTICLES.map(({ slug, title, excerpt, category, author }) => ({
     slug,
     title,
     excerpt,
     category,
+    author,
   }));
 }
