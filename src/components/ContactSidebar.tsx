@@ -1,4 +1,7 @@
+"use client";
+
 import type { ContactPublicData } from "@/lib/site-contact";
+import { useLanguage } from "@/context/LanguageContext";
 
 function isSafeMapEmbedUrl(url: string): boolean {
   const t = url.trim();
@@ -13,6 +16,7 @@ function isSafeMapEmbedUrl(url: string): boolean {
 }
 
 export function ContactSidebar({ data }: { data: ContactPublicData }) {
+  const { t } = useLanguage();
   const showMap = data.mapEmbedUrl && isSafeMapEmbedUrl(data.mapEmbedUrl);
 
   return (
@@ -32,7 +36,9 @@ export function ContactSidebar({ data }: { data: ContactPublicData }) {
         </div>
       ) : null}
       <div>
-        <h3 className="text-xs font-bold uppercase tracking-wide text-brand-navy">Social</h3>
+        <h3 className="text-xs font-bold uppercase tracking-wide text-brand-navy">
+          {t("contactSidebarSocial")}
+        </h3>
         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
           {data.social.map((s) => (
             <a

@@ -3,11 +3,17 @@ export type HomeLocale = "en" | "ar";
 export const HOME_TRANSLATIONS = {
   en: {
     // ── Hero ─────────────────────────────────────────────────────────────────
+    heroBadge: "Egypt's Development & Social Impact Jobs Platform",
+    heroHeading: "Trusted jobs, consultancies, and grants for Egypt's NGO ecosystem",
     heroLine1:
       "Find verified NGO jobs, consultancies, and grants in Egypt's development sector.",
     heroLine2:
       "Post your opening and reach professionals who are already here for this work.",
     heroTrust: "Every employer verified. Every listing reviewed.",
+    heroCardTitle: "Search & filter",
+    heroCardBody:
+      "Category, location, employer, deadline, remote/hybrid, paid or unpaid — built for busy recruiters and applicants.",
+    heroCardCta: "Start searching",
     ctaPrimary: "Browse opportunities",
     ctaSecondary: "Post a listing →",
 
@@ -231,6 +237,20 @@ export const HOME_TRANSLATIONS = {
     contactTitle: "We would love to hear from you",
     contactDescription:
       "Partnerships, media, employer onboarding, or technical support — send us a note and we will route it to the right team.",
+    contactFormName: "Name",
+    contactFormEmail: "Email",
+    contactFormSubject: "Subject",
+    contactFormMessage: "Message",
+    contactFormSend: "Send message",
+    contactFormSending: "Sending…",
+    contactFormSuccess:
+      "Thank you — MasrJobs.org received your message and will reply as soon as we can. Check your inbox for a confirmation email.",
+    contactFormError:
+      "Something went wrong. Please try again or email hello@masrjobs.org.",
+    contactFormNetworkError:
+      "Network error. Please try again or email hello@masrjobs.org.",
+    contactFormCheckError: "Please check the form and try again.",
+    contactSidebarSocial: "Social",
 
     // ── Posting guidelines page ───────────────────────────────────────────────
     postingEyebrow: "Employers",
@@ -280,11 +300,17 @@ export const HOME_TRANSLATIONS = {
   // ═══════════════════════════════════════════════════════════════════════════
   ar: {
     // ── Hero ─────────────────────────────────────────────────────────────────
+    heroBadge: "منصة وظائف التنمية والتأثير الاجتماعي في مصر",
+    heroHeading: "وظائف وإستشارات ومنح موثوقة لمنظومة المنظمات غير الحكومية في مصر",
     heroLine1:
       "ابحث عن وظائف المنظمات غير الحكومية والاستشارات والمنح في قطاع التنمية في مصر.",
     heroLine2:
       "انشر فرصتك وتواصل مع المتخصصين الموجودين هنا لهذا العمل.",
     heroTrust: "كل صاحب عمل موثَّق. كل إعلان مُراجَع.",
+    heroCardTitle: "بحث وتصفية",
+    heroCardBody:
+      "التصنيف، الموقع، صاحب العمل، الموعد النهائي، عن بُعد أو هجين، مدفوع أم لا — مصمَّم للمجندين والمتقدمين المشغولين.",
+    heroCardCta: "ابدأ البحث",
     ctaPrimary: "تصفح الفرص",
     ctaSecondary: "انشر إعلاناً",
 
@@ -509,6 +535,20 @@ export const HOME_TRANSLATIONS = {
     contactTitle: "يسعدنا الاستماع إليك",
     contactDescription:
       "الشراكات، والإعلام، وتأهيل أصحاب العمل، أو الدعم الفني — أرسل لنا ملاحظة وسنوجهها إلى الفريق المناسب.",
+    contactFormName: "الاسم",
+    contactFormEmail: "البريد الإلكتروني",
+    contactFormSubject: "الموضوع",
+    contactFormMessage: "الرسالة",
+    contactFormSend: "إرسال الرسالة",
+    contactFormSending: "جاري الإرسال…",
+    contactFormSuccess:
+      "شكراً — تلقّت MasrJobs.org رسالتك وستردّ في أقرب وقت ممكن. تحقق من بريدك الوارد للحصول على رسالة تأكيد.",
+    contactFormError:
+      "حدث خطأ ما. يرجى المحاولة مرة أخرى أو إرسال بريد إلكتروني إلى hello@masrjobs.org.",
+    contactFormNetworkError:
+      "خطأ في الشبكة. يرجى المحاولة مرة أخرى أو إرسال بريد إلكتروني إلى hello@masrjobs.org.",
+    contactFormCheckError: "يرجى التحقق من النموذج والمحاولة مرة أخرى.",
+    contactSidebarSocial: "التواصل الاجتماعي",
 
     // ── Posting guidelines page ───────────────────────────────────────────────
     postingEyebrow: "أصحاب العمل",
