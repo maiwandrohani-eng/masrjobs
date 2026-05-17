@@ -8,6 +8,7 @@ import { OpportunityListRow } from "@/components/OpportunityListRow";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { usePersistedViewMode } from "@/hooks/usePersistedViewMode";
 import { cn } from "@/lib/cn";
+import { useLanguage } from "@/context/LanguageContext";
 
 const CATEGORIES: OpportunityCategory[] = [
   "Jobs",
@@ -42,6 +43,7 @@ export function OpportunitiesExplorer({
   initialOrganizationId = "",
   initialCategory = null,
 }: Props) {
+  const { t } = useLanguage();
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<OpportunityCategory | "All">(() =>
     categoryFromParam(initialCategory),
@@ -123,19 +125,19 @@ export function OpportunitiesExplorer({
     <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
       <aside className="h-fit space-y-4 rounded-2xl border border-brand-border bg-white p-5 shadow-sm lg:sticky lg:top-24">
         <div>
-          <label className="text-xs font-semibold text-brand-navy">Keyword</label>
+          <label className="text-xs font-semibold text-brand-navy">{t("filterKeyword")}</label>
           <div className="relative mt-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/40" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search titles, orgs…"
+              placeholder={t("filterKeywordPlaceholder")}
               className="w-full rounded-lg border border-brand-border bg-brand-muted py-2.5 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
             />
           </div>
         </div>
         <div>
-          <label className="text-xs font-semibold text-brand-navy">Category</label>
+          <label className="text-xs font-semibold text-brand-navy">{t("filterCategory")}</label>
           <select
             value={category}
             onChange={(e) =>
@@ -143,7 +145,7 @@ export function OpportunitiesExplorer({
             }
             className="mt-1 w-full rounded-lg border border-brand-border bg-white py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
           >
-            <option value="All">All categories</option>
+            <option value="All">{t("filterAllCategories")}</option>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -152,7 +154,7 @@ export function OpportunitiesExplorer({
           </select>
         </div>
         <div>
-          <label className="text-xs font-semibold text-brand-navy">Organization</label>
+          <label className="text-xs font-semibold text-brand-navy">{t("filterOrganization")}</label>
           <select
             value={orgIdFilter}
             onChange={(e) => {
@@ -162,7 +164,7 @@ export function OpportunitiesExplorer({
             }}
             className="mt-1 w-full rounded-lg border border-brand-border bg-white py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
           >
-            <option value="">All organizations</option>
+            <option value="">{t("filterAllOrganizations")}</option>
             {orgOptions.map(([id, name]) => (
               <option key={id} value={id}>
                 {name}
@@ -171,56 +173,56 @@ export function OpportunitiesExplorer({
           </select>
         </div>
         <div>
-          <label className="text-xs font-semibold text-brand-navy">Location contains</label>
+          <label className="text-xs font-semibold text-brand-navy">{t("filterLocation")}</label>
           <input
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g. Cairo"
+            placeholder={t("filterLocationPlaceholder")}
             className="mt-1 w-full rounded-lg border border-brand-border bg-white py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-brand-navy">Type</label>
+          <label className="text-xs font-semibold text-brand-navy">{t("filterType")}</label>
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
             className="mt-1 w-full rounded-lg border border-brand-border bg-white py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
           >
-            <option value="">All types</option>
-            {types.map((t) => (
-              <option key={t} value={t}>
-                {t}
+            <option value="">{t("filterAllTypes")}</option>
+            {types.map((tp) => (
+              <option key={tp} value={tp}>
+                {tp}
               </option>
             ))}
           </select>
         </div>
         <div>
-          <label className="text-xs font-semibold text-brand-navy">Work arrangement</label>
+          <label className="text-xs font-semibold text-brand-navy">{t("filterWorkArrangement")}</label>
           <select
             value={work}
             onChange={(e) => setWork(e.target.value)}
             className="mt-1 w-full rounded-lg border border-brand-border bg-white py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
           >
-            <option value="All">Any</option>
-            <option value="Remote">Remote</option>
-            <option value="Hybrid">Hybrid</option>
-            <option value="On-site">On-site</option>
+            <option value="All">{t("filterAny")}</option>
+            <option value="Remote">{t("filterRemote")}</option>
+            <option value="Hybrid">{t("filterHybrid")}</option>
+            <option value="On-site">{t("filterOnSite")}</option>
           </select>
         </div>
         <div>
-          <label className="text-xs font-semibold text-brand-navy">Compensation</label>
+          <label className="text-xs font-semibold text-brand-navy">{t("filterCompensation")}</label>
           <select
             value={paid}
             onChange={(e) => setPaid(e.target.value)}
             className="mt-1 w-full rounded-lg border border-brand-border bg-white py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
           >
-            <option value="All">Any</option>
-            <option value="Paid">Paid</option>
-            <option value="Unpaid">Unpaid</option>
+            <option value="All">{t("filterAny")}</option>
+            <option value="Paid">{t("filterPaid")}</option>
+            <option value="Unpaid">{t("filterUnpaid")}</option>
           </select>
         </div>
         <div>
-          <label className="text-xs font-semibold text-brand-navy">Deadline on or before</label>
+          <label className="text-xs font-semibold text-brand-navy">{t("filterDeadline")}</label>
           <input
             type="date"
             value={deadlineBefore}
@@ -243,21 +245,21 @@ export function OpportunitiesExplorer({
           }}
           className="w-full rounded-lg border border-brand-border py-2.5 text-sm font-medium text-brand-navy hover:bg-brand-muted"
         >
-          Clear filters
+          {t("filterClearAll")}
         </button>
       </aside>
 
       <div>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-foreground/70">
-            Showing{" "}
+            {t("filterShowing")}{" "}
             <span className="font-semibold text-brand-navy">{filtered.length}</span>{" "}
-            opportunities
+            {t("filterOpportunitiesCount")}
           </p>
           <ViewModeToggle
             value={viewMode}
             onChange={setViewMode}
-            groupAriaLabel="Opportunity browse layout"
+            groupAriaLabel={t("filterLayoutLabel")}
             className="self-stretch sm:self-auto"
           />
         </div>
@@ -278,7 +280,7 @@ export function OpportunitiesExplorer({
         </div>
         {filtered.length === 0 ? (
           <p className="mt-8 rounded-2xl border border-dashed border-brand-border bg-white px-6 py-10 text-center text-sm text-foreground/70 shadow-sm">
-            No opportunities match these filters. Try clearing filters or broadening your search.
+            {t("filterNoMatch")}
           </p>
         ) : null}
       </div>

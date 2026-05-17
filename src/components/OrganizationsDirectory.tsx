@@ -6,6 +6,7 @@ import { Award, BadgeCheck, MapPin } from "lucide-react";
 import type { Organization } from "@/lib/types";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { usePersistedViewMode } from "@/hooks/usePersistedViewMode";
+import { useLanguage } from "@/context/LanguageContext";
 
 /** Stable fragment id across organization renames (slug and public name can change). */
 function orgAnchorId(organizationId: string) {
@@ -24,6 +25,7 @@ function scrollToOrgAnchor(anchorId: string): boolean {
 
 export function OrganizationsDirectory({ organizations }: { organizations: Organization[] }) {
   const { mode, setMode } = usePersistedViewMode("masrjobs:v1:viewOrganizationsDirectory");
+  const { t } = useLanguage();
 
   const scrollFromLocationHash = useCallback(() => {
     if (typeof window === "undefined" || organizations.length === 0) return;
@@ -51,12 +53,12 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-foreground/70">
           <span className="font-semibold text-brand-navy">{organizations.length}</span>{" "}
-          organizations
+          {t("orgDirectoryCount")}
         </p>
         <ViewModeToggle
           value={mode}
           onChange={setMode}
-          groupAriaLabel="Organization directory layout"
+          groupAriaLabel={t("orgDirectoryLayoutLabel")}
           className="self-stretch sm:self-auto"
         />
       </div>
@@ -72,7 +74,7 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">
-                    {org.sector ?? "Social impact"}
+                    {org.sector ?? t("orgDirectorySocialImpact")}
                   </p>
                   <h2 className="mt-1 text-lg font-bold text-brand-navy">{org.name}</h2>
                   <p className="mt-1 flex items-center gap-1.5 text-sm text-foreground/70">
@@ -83,16 +85,16 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   {org.featured ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-brand-gold/20 px-2.5 py-0.5 text-xs font-semibold text-brand-navy">
-                      <Award className="h-3.5 w-3.5" aria-hidden /> Featured
+                      <Award className="h-3.5 w-3.5" aria-hidden /> {t("orgDirectoryFeatured")}
                     </span>
                   ) : null}
                   {org.verified ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-brand-gold-muted px-2.5 py-0.5 text-xs font-semibold text-brand-navy ring-1 ring-brand-gold/35">
-                      <BadgeCheck className="h-3.5 w-3.5" aria-hidden /> Verified
+                      <BadgeCheck className="h-3.5 w-3.5" aria-hidden /> {t("orgDirectoryVerified")}
                     </span>
                   ) : (
                     <span className="text-xs font-medium text-foreground/50">
-                      Verification pending
+                      {t("orgDirectoryPendingVerification")}
                     </span>
                   )}
                 </div>
@@ -108,13 +110,13 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
                   href={`/organizations/${encodeURIComponent(org.slug)}`}
                   className="inline-flex min-h-[2.75rem] cursor-pointer items-center justify-center rounded-lg bg-brand-navy px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:min-h-0"
                 >
-                  View profile
+                  {t("orgDirectoryViewProfile")}
                 </Link>
                 <Link
                   href={`/opportunities?orgId=${encodeURIComponent(org.id)}`}
                   className="inline-flex min-h-[2.75rem] items-center justify-center rounded-lg border border-brand-border px-4 py-2.5 text-center text-sm font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:min-h-0"
                 >
-                  View opportunities
+                  {t("orgDirectoryViewOpportunities")}
                 </Link>
                 {org.website ? (
                   <a
@@ -123,7 +125,7 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
                     rel="noopener noreferrer"
                     className="inline-flex min-h-[2.75rem] items-center justify-center rounded-lg border border-brand-border px-4 py-2.5 text-center text-sm font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:min-h-0"
                   >
-                    Website
+                    {t("orgDirectoryWebsite")}
                   </a>
                 ) : null}
               </div>
@@ -140,22 +142,22 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
             >
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">
-                  {org.sector ?? "Social impact"}
+                  {org.sector ?? t("orgDirectorySocialImpact")}
                 </p>
                 <div className="mt-0.5 flex flex-wrap items-center gap-2">
                   <h2 className="text-base font-bold text-brand-navy">{org.name}</h2>
                   {org.featured ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-brand-gold/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-brand-navy">
-                      Featured
+                      {t("orgDirectoryFeatured")}
                     </span>
                   ) : null}
                   {org.verified ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-brand-gold-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-brand-navy ring-1 ring-brand-gold/35">
-                      Verified
+                      {t("orgDirectoryVerified")}
                     </span>
                   ) : (
                     <span className="text-[10px] font-medium uppercase text-foreground/50">
-                      Pending verification
+                      {t("orgDirectoryPendingVerificationShort")}
                     </span>
                   )}
                 </div>
@@ -175,13 +177,13 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
                   href={`/organizations/${encodeURIComponent(org.slug)}`}
                   className="inline-flex min-h-[2.75rem] w-full cursor-pointer items-center justify-center rounded-lg bg-brand-navy px-3 py-2 text-center text-xs font-semibold text-white shadow-sm hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:w-auto sm:min-h-0"
                 >
-                  View profile
+                  {t("orgDirectoryViewProfile")}
                 </Link>
                 <Link
                   href={`/opportunities?orgId=${encodeURIComponent(org.id)}`}
                   className="inline-flex min-h-[2.75rem] w-full items-center justify-center rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:w-auto sm:min-h-0"
                 >
-                  View opportunities
+                  {t("orgDirectoryViewOpportunities")}
                 </Link>
                 {org.website ? (
                   <a
@@ -190,7 +192,7 @@ export function OrganizationsDirectory({ organizations }: { organizations: Organ
                     rel="noopener noreferrer"
                     className="inline-flex min-h-[2.75rem] w-full items-center justify-center rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50 sm:w-auto sm:min-h-0"
                   >
-                    Website
+                    {t("orgDirectoryWebsite")}
                   </a>
                 ) : null}
               </div>

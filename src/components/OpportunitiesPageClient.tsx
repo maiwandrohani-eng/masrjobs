@@ -4,9 +4,11 @@ import { useSearchParams } from "next/navigation";
 import { OpportunitiesExplorer } from "@/components/OpportunitiesExplorer";
 import { PageIntro, PageShell } from "@/components/PageShell";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function OpportunitiesPageClient() {
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
   const orgIdFilter = searchParams.get("orgId")
     ? decodeURIComponent(searchParams.get("orgId")!.trim())
     : "";
@@ -20,12 +22,12 @@ export function OpportunitiesPageClient() {
     <div className="min-h-[60vh] bg-background">
       <PageShell>
         <PageIntro
-          eyebrow="Opportunities"
-          title="Browse roles, consultancies, trainings, and more"
-          description="Filter by category, location, organization, work arrangement, and deadline. Listings posted by organizations appear here after admin approval."
+          eyebrow={t("opportunitiesEyebrow")}
+          title={t("opportunitiesTitle")}
+          description={t("opportunitiesDescription")}
         />
         {!hydrated ? (
-          <p className="text-sm text-foreground/60">Loading opportunities…</p>
+          <p className="text-sm text-foreground/60">{t("opportunitiesLoading")}</p>
         ) : (
           <OpportunitiesExplorer
             opportunities={opportunities}

@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
 const CATEGORY_TABS = [
-  { label: "Jobs", category: "Jobs" },
-  { label: "Consultancies", category: "Consultancies" },
-  { label: "Trainings", category: "Trainings" },
-  { label: "Volunteering", category: "Volunteer Roles" },
-  { label: "Tenders", category: "Tenders" },
-  { label: "Grants", category: "Grants" },
+  { labelKey: "Jobs", category: "Jobs" },
+  { labelKey: "Consultancies", category: "Consultancies" },
+  { labelKey: "Trainings", category: "Trainings" },
+  { labelKey: "Volunteering", category: "Volunteer Roles" },
+  { labelKey: "Tenders", category: "Tenders" },
+  { labelKey: "Grants", category: "Grants" },
 ] as const;
 
 const EARLY_LAUNCH_THRESHOLD = 10;
@@ -31,13 +32,13 @@ export function HomeCategorySection({ publishedOpportunityCount }: Props) {
 function CategoryTabs() {
   return (
     <ul className="flex flex-wrap gap-2 text-xs font-medium text-brand-navy/80">
-      {CATEGORY_TABS.map(({ label, category }) => (
+      {CATEGORY_TABS.map(({ labelKey, category }) => (
         <li key={category}>
           <Link
             href={`/opportunities?category=${encodeURIComponent(category)}`}
             className="inline-block rounded-full border border-brand-border bg-white px-3 py-1.5 shadow-sm transition hover:border-brand-navy/25 hover:bg-brand-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/40"
           >
-            {label}
+            {labelKey}
           </Link>
         </li>
       ))}
@@ -46,6 +47,7 @@ function CategoryTabs() {
 }
 
 function EarlyAccessCapture() {
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -56,7 +58,7 @@ function EarlyAccessCapture() {
     const trimmed = email.trim();
     if (!trimmed) {
       setStatus("error");
-      setMessage("Please enter your email.");
+      setMessage(t("earlyEmailRequired"));
       return;
     }
     setStatus("loading");
@@ -75,31 +77,23 @@ function EarlyAccessCapture() {
         if (!res.ok) {
           setStatus("error");
           setMessage(
-            typeof data.error === "string"
-              ? data.error
-              : "Something went wrong. Please try again.",
+            typeof data.error === "string" ? data.error : t("earlyError"),
           );
           return;
         }
         setStatus("success");
-        setMessage(
-          data.alreadyRegistered
-            ? "You’re already on the list — we’ll notify you when more listings go live."
-            : "Thanks — we’ll notify you when more listings go live.",
-        );
+        setMessage(data.alreadyRegistered ? t("earlyAlreadyOnList") : t("earlyThankYou"));
         setEmail("");
       })
       .catch(() => {
         setStatus("error");
-        setMessage("Network error. Please try again.");
+        setMessage(t("earlyNetworkError"));
       });
   };
 
   return (
     <div>
-      <p className="text-sm font-medium text-brand-navy">
-        Early launch — new listings being added.
-      </p>
+      <p className="text-sm font-medium text-brand-navy">{t("earlyLaunchText")}</p>
       <form
         onSubmit={onSubmit}
         className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start"
@@ -109,7 +103,7 @@ function EarlyAccessCapture() {
             type="email"
             name="email"
             autoComplete="email"
-            placeholder="Your email address"
+            placeholder={t("resourcesNewsletterPlaceholder")}
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
@@ -133,7 +127,7 @@ function EarlyAccessCapture() {
           disabled={status === "loading"}
           className="shrink-0 rounded-xl bg-brand-navy px-6 py-2.5 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-60"
         >
-          {status === "loading" ? "Saving…" : "Notify me"}
+          {status === "loading" ? t("earlySaving") : t("newsletterButton")}
         </button>
       </form>
     </div>

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { DEFAULT_SOCIAL_LINKS, type SocialLink } from "@/lib/site-contact-defaults";
+import { useLanguage } from "@/context/LanguageContext";
 
 type SiteFooterProps = {
   /** When set (e.g. from DB via layout), overrides default social icons. */
@@ -7,6 +10,7 @@ type SiteFooterProps = {
 };
 
 export function SiteFooter({ social }: SiteFooterProps) {
+  const { t } = useLanguage();
   const links = social?.length ? social : DEFAULT_SOCIAL_LINKS;
 
   return (
@@ -17,9 +21,7 @@ export function SiteFooter({ social }: SiteFooterProps) {
             <div className="text-base font-semibold text-brand-gold-soft">
               MasrJobs.org
             </div>
-            <p className="mt-2 text-sm text-white/80">
-              Egypt’s Development & Social Impact Jobs Platform.
-            </p>
+            <p className="mt-2 text-sm text-white/80">{t("footerTagline")}</p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {links.map((s) => (
                 <a
@@ -39,84 +41,64 @@ export function SiteFooter({ social }: SiteFooterProps) {
 
           <div className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-3">
             <div className="flex flex-col gap-2">
-              <div className="font-semibold text-brand-gold-soft">Platform</div>
-              <Link
-                href="/opportunities"
-                className="text-white/75 hover:text-brand-gold-soft"
-              >
-                Opportunities
+              <div className="font-semibold text-brand-gold-soft">{t("footerPlatformCol")}</div>
+              <Link href="/opportunities" className="text-white/75 hover:text-brand-gold-soft">
+                {t("footerOpportunities")}
               </Link>
-              <Link
-                href="/organizations"
-                className="text-white/75 hover:text-brand-gold-soft"
-              >
-                Organizations
+              <Link href="/organizations" className="text-white/75 hover:text-brand-gold-soft">
+                {t("footerOrganizations")}
               </Link>
-              <Link
-                href="/resources"
-                className="text-white/75 hover:text-brand-gold-soft"
-              >
-                Resources
+              <Link href="/resources" className="text-white/75 hover:text-brand-gold-soft">
+                {t("footerResources")}
               </Link>
-              <Link
-                href="/how-it-works"
-                className="text-white/75 hover:text-brand-gold-soft"
-              >
-                How it works
+              <Link href="/how-it-works" className="text-white/75 hover:text-brand-gold-soft">
+                {t("footerHowItWorks")}
               </Link>
-              <Link
-                href="/sectors"
-                className="text-white/75 hover:text-brand-gold-soft"
-              >
-                Browse by theme
+              <Link href="/sectors" className="text-white/75 hover:text-brand-gold-soft">
+                {t("footerBrowseTheme")}
               </Link>
-              <Link
-                href="/posting-guidelines"
-                className="text-white/75 hover:text-brand-gold-soft"
-              >
-                Posting guidelines
+              <Link href="/posting-guidelines" className="text-white/75 hover:text-brand-gold-soft">
+                {t("footerPostingGuidelines")}
               </Link>
               <Link href="/events" className="text-white/75 hover:text-brand-gold-soft">
-                Events
+                {t("footerEvents")}
               </Link>
             </div>
             <div className="flex flex-col gap-2">
-              <div className="font-semibold text-brand-gold-soft">Company</div>
+              <div className="font-semibold text-brand-gold-soft">{t("footerCompanyCol")}</div>
               <Link href="/about" className="text-white/75 hover:text-brand-gold-soft">
-                About
+                {t("footerAbout")}
               </Link>
               <Link href="/contact" className="text-white/75 hover:text-brand-gold-soft">
-                Contact
+                {t("footerContact")}
               </Link>
               <Link href="/partners" className="text-white/75 hover:text-brand-gold-soft">
-                Partners
+                {t("footerPartners")}
               </Link>
               <Link href="/impact" className="text-white/75 hover:text-brand-gold-soft">
-                Transparency
+                {t("footerTransparency")}
               </Link>
               <Link href="/spotlights" className="text-white/75 hover:text-brand-gold-soft">
-                Employer spotlights
+                {t("footerSpotlights")}
               </Link>
             </div>
             <div className="flex flex-col gap-2">
-              <div className="font-semibold text-brand-gold-soft">Legal</div>
+              <div className="font-semibold text-brand-gold-soft">{t("footerLegalCol")}</div>
               <Link href="/terms" className="text-white/75 hover:text-brand-gold-soft">
-                Terms
+                {t("footerTerms")}
               </Link>
               <Link href="/privacy" className="text-white/75 hover:text-brand-gold-soft">
-                Privacy
+                {t("footerPrivacy")}
               </Link>
             </div>
           </div>
         </div>
 
         <div className="mt-8 flex flex-col gap-2 border-t border-white/15 pt-6 text-xs text-white/60 md:flex-row md:items-center md:justify-between">
-          <div>© 2026 MasrJobs.org. All rights reserved.</div>
+          <div>{t("footerCopyright")}</div>
           <div className="flex items-center gap-2">
             <span className="inline-block h-2 w-2 rounded-full bg-brand-gold" />
-            <span className="text-white/70">
-              Built for Egypt’s social impact ecosystem.
-            </span>
+            <span className="text-white/70">{t("footerBuiltFor")}</span>
           </div>
         </div>
       </div>

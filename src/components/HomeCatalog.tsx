@@ -5,9 +5,11 @@ import { HomeCtaRow, HomeFeatured } from "@/components/HomeFeatured";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
 import { usePersistedViewMode } from "@/hooks/usePersistedViewMode";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function HomeCatalog() {
   const { opportunities, hydrated } = useMasrJobs();
+  const { t } = useLanguage();
   const { mode: homeViewMode, setMode: setHomeViewMode } = usePersistedViewMode(
     "masrjobs:v1:viewHomeOpportunities",
   );
@@ -16,7 +18,7 @@ export function HomeCatalog() {
     return (
       <>
         <section className="mx-auto max-w-6xl px-4 py-14">
-          <p className="text-sm text-foreground/60">Loading opportunities…</p>
+          <p className="text-sm text-foreground/60">{t("catalogLoading")}</p>
         </section>
       </>
     );
@@ -32,17 +34,16 @@ export function HomeCatalog() {
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
           <div>
             <h2 className="text-2xl font-bold text-brand-navy">
-              Featured opportunities
+              {t("catalogFeaturedHeading")}
             </h2>
             <p className="mt-2 max-w-2xl text-sm text-foreground/70">
-              Hand-picked and newly approved listings across Egypt’s social impact
-              sector.
+              {t("catalogFeaturedSubtext")}
             </p>
           </div>
           <ViewModeToggle
             value={homeViewMode}
             onChange={setHomeViewMode}
-            groupAriaLabel="Featured and latest opportunity layout"
+            groupAriaLabel={t("catalogLayoutLabel")}
             className="self-stretch sm:self-auto"
           />
         </div>
@@ -50,7 +51,7 @@ export function HomeCatalog() {
           <HomeFeatured
             items={featured}
             viewMode={homeViewMode}
-            emptyMessage="No featured opportunities right now. Browse all roles to discover what is open."
+            emptyMessage={t("catalogFeaturedEmpty")}
           />
         </div>
         <HomeCtaRow />
@@ -61,24 +62,24 @@ export function HomeCatalog() {
           <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
             <div>
               <h2 className="text-2xl font-bold text-brand-navy">
-                Latest opportunities
+                {t("catalogLatestHeading")}
               </h2>
               <p className="mt-2 text-sm text-foreground/70">
-                Recently updated deadlines and new postings.
+                {t("catalogLatestSubtext")}
               </p>
             </div>
             <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
               <ViewModeToggle
                 value={homeViewMode}
                 onChange={setHomeViewMode}
-                groupAriaLabel="Featured and latest opportunity layout"
+                groupAriaLabel={t("catalogLayoutLabel")}
                 className="self-stretch sm:self-auto"
               />
               <Link
                 href="/opportunities"
                 className="text-center text-sm font-semibold text-brand-gold underline decoration-brand-gold/50 underline-offset-2 sm:text-left"
               >
-                See full list
+                {t("catalogSeeFullList")}
               </Link>
             </div>
           </div>
@@ -86,7 +87,7 @@ export function HomeCatalog() {
             <HomeFeatured
               items={latest}
               viewMode={homeViewMode}
-              emptyMessage="No opportunities to show in this section yet."
+              emptyMessage={t("catalogLatestEmpty")}
             />
           </div>
         </div>

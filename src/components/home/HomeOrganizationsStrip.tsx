@@ -1,18 +1,23 @@
+"use client";
+
 import Link from "next/link";
 import type { VerifiedOrgStripItem } from "@/lib/home-page-data";
+import { useLanguage } from "@/context/LanguageContext";
 
 type Props = {
   organizations: VerifiedOrgStripItem[];
 };
 
 export function HomeOrganizationsStrip({ organizations }: Props) {
+  const { t } = useLanguage();
+
   if (organizations.length === 0) return null;
 
   return (
     <section className="border-t border-brand-border/60 bg-white/50 py-8">
       <div className="mx-auto max-w-6xl px-4">
         <h2 className="text-center text-sm font-bold uppercase tracking-wide text-brand-navy/80">
-          Organizations on MasrJobs
+          {t("orgsOnMasrjobs")}
         </h2>
         <ul className="mt-6 flex flex-wrap items-center justify-center gap-6 md:gap-10">
           {organizations.map((org) => (
