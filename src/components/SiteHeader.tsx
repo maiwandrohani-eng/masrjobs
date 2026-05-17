@@ -8,13 +8,13 @@ import { cn } from "@/lib/cn";
 import { useLanguage } from "@/context/LanguageContext";
 import { useMasrJobs } from "@/context/MasrJobsProvider";
 
-const nav = [
-  { href: "/opportunities", label: "Opportunities" },
-  { href: "/organizations", label: "Organizations" },
-  { href: "/resources", label: "Resources" },
-  { href: "/how-it-works", label: "How it works" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
+const NAV_KEYS = [
+  { href: "/opportunities", key: "navOpportunities" },
+  { href: "/organizations", key: "navOrganizations" },
+  { href: "/resources", key: "navResources" },
+  { href: "/how-it-works", key: "navHowItWorks" },
+  { href: "/about", key: "navAbout" },
+  { href: "/contact", key: "navContact" },
 ] as const;
 
 function LanguageToggle({ className }: { className?: string }) {
@@ -54,6 +54,7 @@ function LanguageToggle({ className }: { className?: string }) {
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const { session, hydrated } = useMasrJobs();
+  const { t } = useLanguage();
 
   const dashboardHref =
     session?.role === "organization"
@@ -73,13 +74,13 @@ export function SiteHeader() {
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
-          {nav.map((item) => (
+          {NAV_KEYS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className="rounded-lg px-3 py-2 text-sm font-medium text-brand-navy/85 transition-colors hover:bg-brand-gold-muted hover:text-brand-navy"
             >
-              {item.label}
+              {t(item.key)}
             </Link>
           ))}
         </nav>
@@ -91,7 +92,7 @@ export function SiteHeader() {
               href={dashboardHref}
               className="rounded-lg border border-brand-navy/15 bg-white px-3 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:border-brand-gold/50 hover:bg-brand-gold-muted"
             >
-              Dashboard
+              {t("navDashboard")}
             </Link>
           ) : null}
           {hydrated && !session ? (
@@ -100,13 +101,13 @@ export function SiteHeader() {
                 href="/login"
                 className="rounded-lg px-3 py-2 text-sm font-medium text-brand-navy/80 hover:bg-brand-gold-muted hover:text-brand-navy"
               >
-                Log in
+                {t("navLogin")}
               </Link>
               <Link
                 href="/register"
                 className="rounded-lg bg-brand-navy px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-navy-deep"
               >
-                Create account
+                {t("navRegister")}
               </Link>
             </>
           ) : null}
@@ -116,7 +117,7 @@ export function SiteHeader() {
           type="button"
           className="inline-flex rounded-lg border border-brand-border p-2 text-brand-navy md:hidden"
           aria-expanded={open}
-          aria-label={open ? "Close menu" : "Open menu"}
+          aria-label={open ? t("navCloseMenu") : t("navOpenMenu")}
           onClick={() => setOpen((v) => !v)}
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -133,14 +134,14 @@ export function SiteHeader() {
           <div className="px-3 py-2">
             <LanguageToggle className="w-fit" />
           </div>
-          {nav.map((item) => (
+          {NAV_KEYS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
               className="rounded-lg px-3 py-3 text-sm font-medium text-brand-navy hover:bg-brand-gold-muted"
             >
-              {item.label}
+              {t(item.key)}
             </Link>
           ))}
           {hydrated && session ? (
@@ -149,7 +150,7 @@ export function SiteHeader() {
               onClick={() => setOpen(false)}
               className="rounded-lg px-3 py-3 text-sm font-semibold text-brand-gold hover:bg-brand-gold-muted"
             >
-              Dashboard
+              {t("navDashboard")}
             </Link>
           ) : null}
           {hydrated && !session ? (
@@ -159,14 +160,14 @@ export function SiteHeader() {
                 onClick={() => setOpen(false)}
                 className="rounded-lg border border-brand-border py-2.5 text-center text-sm font-medium text-brand-navy"
               >
-                Log in
+                {t("navLogin")}
               </Link>
               <Link
                 href="/register"
                 onClick={() => setOpen(false)}
                 className="rounded-lg bg-brand-navy py-2.5 text-center text-sm font-semibold text-white"
               >
-                Create account
+                {t("navRegister")}
               </Link>
             </div>
           ) : null}
