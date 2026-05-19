@@ -52,7 +52,7 @@ export function HomeHero({ publishedOpportunityCount, verifiedOrganizations }: P
         <div className="relative rounded-3xl border border-brand-border bg-white p-8 shadow-md">
           <div className="absolute inset-x-8 top-0 h-1 rounded-full bg-gradient-to-r from-brand-gold via-brand-gold-soft to-brand-navy opacity-95" />
           <div className="flex flex-col items-center text-center">
-            <LogoMark />
+            <LogoMark className="!h-12 !max-w-[14rem] sm:!h-14 sm:!max-w-[16rem] lg:!h-14 xl:!h-16 xl:!max-w-[18rem]" />
             <p className="mt-6 text-sm font-semibold text-brand-navy">{t("heroCardTitle")}</p>
             <p className="mt-2 text-sm text-foreground/65">{t("heroCardBody")}</p>
             <Link

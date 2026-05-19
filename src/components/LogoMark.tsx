@@ -16,7 +16,10 @@ export function LogoMark({ className, height = 100, width = 280 }: LogoMarkProps
         alt="MasrJobs.org"
         width={width}
         height={height}
-        className="h-9 w-auto max-w-[10.5rem] sm:h-10 sm:max-w-[11.5rem] lg:h-11 lg:max-w-[13rem] xl:h-[4.25rem] xl:max-w-none"
+        className={cn(
+          "h-8 w-auto max-w-[9rem] sm:h-9 sm:max-w-[10rem] lg:h-10 lg:max-w-[11rem] xl:h-11 xl:max-w-[12rem]",
+          className,
+        )}
         priority
       />
     </span>
