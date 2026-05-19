@@ -7,16 +7,16 @@ type LogoMarkProps = {
   width?: number;
 };
 
-/** Transparent logo — no background; tuned for clear visibility in the navbar and on the homepage. */
-export function LogoMark({ className, height = 100, width = 280 }: LogoMarkProps) {
+/** Site logo from /public/logo.png (black canvas; multiply blends on light backgrounds). */
+export function LogoMark({ className, height = 92, width = 280 }: LogoMarkProps) {
   return (
     <span className={cn("inline-flex shrink-0 items-center", className)}>
       <Image
-        src="/logo.jpg"
+        src="/logo.png"
         alt="MasrJobs.org"
         width={width}
         height={height}
-        className="h-14 w-auto sm:h-16 md:h-[4.75rem]"
+        className="h-10 w-auto mix-blend-multiply sm:h-11 md:h-12"
         priority
       />
     </span>
