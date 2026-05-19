@@ -67,30 +67,30 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-brand-gold/25 bg-white/95 shadow-[0_1px_0_0_rgba(27,54,93,0.06)] backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3.5 md:py-4">
-        <Link href="/" className="flex shrink-0 items-center gap-2">
+      <div className="mx-auto flex w-full max-w-6xl items-center gap-3 px-4 py-3 lg:gap-4 lg:py-3.5">
+        <Link href="/" className="flex shrink-0 items-center">
           <LogoMark />
           <span className="sr-only">MasrJobs.org home</span>
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden min-w-0 flex-1 flex-nowrap items-center justify-center gap-0.5 lg:flex lg:gap-1">
           {NAV_KEYS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-brand-navy/85 transition-colors hover:bg-brand-gold-muted hover:text-brand-navy"
+              className="shrink-0 whitespace-nowrap rounded-lg px-2 py-2 text-sm font-medium text-brand-navy/85 transition-colors hover:bg-brand-gold-muted hover:text-brand-navy lg:px-3"
             >
               {t(item.key)}
             </Link>
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="ml-auto hidden shrink-0 flex-nowrap items-center gap-2 lg:flex">
           <LanguageToggle />
           {hydrated && session ? (
             <Link
               href={dashboardHref}
-              className="rounded-lg border border-brand-navy/15 bg-white px-3 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:border-brand-gold/50 hover:bg-brand-gold-muted"
+              className="shrink-0 whitespace-nowrap rounded-lg border border-brand-navy/15 bg-white px-3 py-2 text-sm font-semibold text-brand-navy shadow-sm hover:border-brand-gold/50 hover:bg-brand-gold-muted"
             >
               {t("navDashboard")}
             </Link>
@@ -99,13 +99,13 @@ export function SiteHeader() {
             <>
               <Link
                 href="/login"
-                className="rounded-lg px-3 py-2 text-sm font-medium text-brand-navy/80 hover:bg-brand-gold-muted hover:text-brand-navy"
+                className="shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-brand-navy/80 hover:bg-brand-gold-muted hover:text-brand-navy"
               >
                 {t("navLogin")}
               </Link>
               <Link
                 href="/register"
-                className="rounded-lg bg-brand-navy px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-navy-deep"
+                className="shrink-0 whitespace-nowrap rounded-lg bg-brand-navy px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-navy-deep"
               >
                 {t("navRegister")}
               </Link>
@@ -115,7 +115,7 @@ export function SiteHeader() {
 
         <button
           type="button"
-          className="inline-flex rounded-lg border border-brand-border p-2 text-brand-navy md:hidden"
+          className="ml-auto inline-flex shrink-0 rounded-lg border border-brand-border p-2 text-brand-navy lg:hidden"
           aria-expanded={open}
           aria-label={open ? t("navCloseMenu") : t("navOpenMenu")}
           onClick={() => setOpen((v) => !v)}
@@ -126,7 +126,7 @@ export function SiteHeader() {
 
       <div
         className={cn(
-          "border-t border-brand-border bg-white md:hidden",
+          "border-t border-brand-border bg-white lg:hidden",
           open ? "block" : "hidden",
         )}
       >
