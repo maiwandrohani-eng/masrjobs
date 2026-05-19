@@ -22,6 +22,9 @@ export const metadata: Metadata = {
     "MasrJobs.org connects Egypt’s NGO, development, humanitarian, and social impact ecosystem with jobs, consultancies, trainings, volunteering, tenders, and grants.",
 };
 
+/** Footer social links and contact sidebar read SiteSetting on each request (not build-time cache). */
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({
   children,
 }: Readonly<{

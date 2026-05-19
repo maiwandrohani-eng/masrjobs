@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { z } from "zod";
@@ -113,6 +114,9 @@ export async function PUT(req: Request) {
         update: { value: socialJson },
       }),
     ]);
+
+    revalidatePath("/", "layout");
+    revalidatePath("/contact");
 
     const data = await getContactPublicData();
     return NextResponse.json({ ok: true, data });
