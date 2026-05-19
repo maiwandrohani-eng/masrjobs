@@ -7,8 +7,8 @@ type LogoMarkProps = {
   width?: number;
 };
 
-/** Site logo from /public/logo.png (black canvas; multiply blends on light backgrounds). */
-export function LogoMark({ className, height = 92, width = 280 }: LogoMarkProps) {
+/** Transparent site logo from /public/logo.png */
+export function LogoMark({ className, height = 100, width = 280 }: LogoMarkProps) {
   return (
     <span className={cn("inline-flex shrink-0 items-center", className)}>
       <Image
@@ -16,7 +16,7 @@ export function LogoMark({ className, height = 92, width = 280 }: LogoMarkProps)
         alt="MasrJobs.org"
         width={width}
         height={height}
-        className="h-10 w-auto mix-blend-multiply sm:h-11 md:h-12"
+        className="h-12 w-auto sm:h-14 md:h-[4.25rem]"
         priority
       />
     </span>
