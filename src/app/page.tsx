@@ -9,6 +9,9 @@ import {
   getVerifiedOrganizationsForStrip,
 } from "@/lib/home-page-data";
 
+/** Always load verified orgs and listing counts from the database (no stale build cache). */
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const [publishedOpportunityCount, verifiedOrganizations] = await Promise.all([
     getPublishedOpportunityCount(),
